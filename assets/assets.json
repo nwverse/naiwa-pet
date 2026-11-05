@@ -1,0 +1,163 @@
+{
+ "fps": 24,
+ "pets": [
+  "sleep",
+  "listen",
+  "relax",
+  "cloud",
+  "fish",
+  "lonely",
+  "wires",
+  "clothespin",
+  "balloons",
+  "float",
+  "flowers",
+  "ripple",
+  "immerse",
+  "look",
+  "glance"
+ ],
+ "clips": {
+  "immerse": {
+   "video": "immerse.mov",
+   "frames": 109,
+   "loop": true,
+   "title": "沉溺",
+   "desc": "闭着眼悬浮在水里"
+  },
+  "look": {
+   "video": "look.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "沉溺 · 看着你",
+   "desc": "睁开眼转过来看着你"
+  },
+  "relax": {
+   "video": "relax.mov",
+   "frames": 109,
+   "loop": true,
+   "title": "悠闲",
+   "desc": "靠在橙色沙发上晒太阳"
+  },
+  "cloud": {
+   "video": "cloud.mov",
+   "frames": 109,
+   "loop": true,
+   "title": "云幻",
+   "desc": "晚霞里一团云做的奶蛙"
+  },
+  "sleep": {
+   "video": "sleep.mov",
+   "frames": 120,
+   "loop": true,
+   "title": "安睡",
+   "desc": "趴在一朵云上睡觉"
+  },
+  "listen": {
+   "video": "listen.mov",
+   "frames": 96,
+   "loop": true,
+   "title": "听歌",
+   "desc": "戴着耳机坐着发呆"
+  },
+  "fish": {
+   "video": "fish.mov",
+   "frames": 144,
+   "loop": true,
+   "title": "封闭",
+   "desc": "浮在半空，一圈小鱼绕着它"
+  },
+  "lonely": {
+   "video": "lonely.mov",
+   "frames": 120,
+   "loop": true,
+   "title": "孤独",
+   "desc": "背对你扶着椅子望着远方"
+  },
+  "wires": {
+   "video": "wires.mov",
+   "frames": 109,
+   "loop": true,
+   "title": "缠线",
+   "desc": "被一堆数据线缠住，周围散着老电子产品"
+  },
+  "clothespin": {
+   "video": "clothespin.mov",
+   "frames": 109,
+   "loop": true,
+   "title": "晾衣",
+   "desc": "被晾衣夹夹在绳子上晃"
+  },
+  "balloons": {
+   "video": "balloons.mov",
+   "frames": 109,
+   "loop": true,
+   "title": "气球",
+   "desc": "被一串气球吊着飘"
+  },
+  "float": {
+   "video": "float.mov",
+   "frames": 109,
+   "loop": true,
+   "title": "漂浮",
+   "desc": "泡在海里只露出上半身"
+  },
+  "flowers": {
+   "video": "flowers.mov",
+   "frames": 120,
+   "loop": true,
+   "title": "花海",
+   "desc": "在花田里张开手臂慢慢转"
+  },
+  "ripple": {
+   "video": "ripple.mov",
+   "frames": 109,
+   "loop": true,
+   "title": "涟漪",
+   "desc": "仰面漂在落满花瓣的水塘里"
+  },
+  "glance": {
+   "video": "glance.mov",
+   "frames": 113,
+   "loop": false,
+   "title": "惊鸿一瞥",
+   "desc": "镜头推近，它斜着瞥你一眼"
+  }
+ },
+ "idle": [
+  {
+   "from": 0,
+   "pets": [
+    "lonely"
+   ]
+  },
+  {
+   "from": 6,
+   "pets": [
+    "sleep"
+   ]
+  },
+  {
+   "from": 12,
+   "pets": [
+    "listen",
+    "relax"
+   ]
+  },
+  {
+   "from": 17,
+   "pets": [
+    "cloud"
+   ]
+  },
+  {
+   "from": 20,
+   "pets": [
+    "fish"
+   ]
+  }
+ ],
+ "work": "immerse",
+ "look": "look",
+ "done": "glance"
+}
