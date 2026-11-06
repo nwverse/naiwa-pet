@@ -119,7 +119,7 @@ enum CLI {
     /// 在后台起一只奶蛙。打包成 .app 时走 open（交给 LaunchServices，跟调用方脱离关系），
     /// 开发时直接把自己拉起来，并脱离当前会话。
     static func launch(_ arguments: [String]) {
-        let exe = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+        let exe = executable()
         let bundle = exe.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         if bundle.pathExtension == "app" {
             run("/usr/bin/open", ["-g", "-a", bundle.path, "--args"] + arguments)
@@ -137,6 +137,11 @@ enum CLI {
         var pid: pid_t = 0
         posix_spawn(&pid, exe.path, &actions, &attr, argv, environ)
         argv.forEach { free($0) }
+    }
+
+    /// 自己的可执行文件，软链解开。不能只看 argv[0]：从 PATH 上跑时它就是个 naiwa，会按当前目录去找
+    static func executable(argv0: String = CommandLine.arguments[0]) -> URL {
+        (Bundle.main.executableURL ?? URL(fileURLWithPath: argv0)).resolvingSymlinksInPath()
     }
 
     private static func run(_ path: String, _ arguments: [String]) {

@@ -36,7 +36,7 @@ enum Hooks {
         let path = ProcessInfo.processInfo.environment["PATH"]?.split(separator: ":")
             .map { URL(fileURLWithPath: String($0)).appendingPathComponent("naiwa").path }
             .first { FileManager.default.isExecutableFile(atPath: $0) }
-            ?? URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
+            ?? CLI.executable().path
         return path.contains(" ") ? "'\(path)'" : path
     }
 
