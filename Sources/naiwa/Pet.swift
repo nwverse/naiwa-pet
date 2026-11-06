@@ -300,9 +300,8 @@ final class Pet {
 
     func updatePassThrough() {
         guard !view.dragging else { return }
-        let m = NSEvent.mouseLocation
-        let over = panel.frame.contains(m) && view.isOpaque(atScreen: m)
-        if panel.ignoresMouseEvents == over { panel.ignoresMouseEvents = !over }
+        let m = view.mouseLocation()
+        let over = view.updatePassThrough()
         // 停一下：指针进到奶蛙身上开始计时；离开整个窗口才能再来一次（换了一只以后形状变了，指针可能落在透明处，不算离开）
         if over, !hovering {
             hovering = true
@@ -415,6 +414,8 @@ final class PetView: NSView {
     private var downAt: NSPoint = .zero
     private var downOrigin: NSPoint = .zero
     private var stroke = Stroke()
+    /// 指针的屏幕坐标（测试里换成固定的点）
+    var mouseLocation: () -> NSPoint = { NSEvent.mouseLocation }
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -437,6 +438,17 @@ final class PetView: NSView {
         layer?.contents = surface
         CATransaction.commit()
         current = pb
+        // 指针没动、画面换了形状也要跟着切穿透；指针不在窗口里就不用管。只切穿透，不碰悬停计时
+        if !dragging, let win = window, win.frame.contains(mouseLocation()) { updatePassThrough() }
+    }
+
+    /// 按指针下当前帧的像素切换窗口接不接鼠标，返回指针是不是落在奶蛙实心处
+    @discardableResult func updatePassThrough() -> Bool {
+        guard let win = window else { return false }
+        let m = mouseLocation()
+        let over = win.frame.contains(m) && isOpaque(atScreen: m)
+        if win.ignoresMouseEvents == over { win.ignoresMouseEvents = !over }
+        return over
     }
 
     /// 屏幕坐标这一点上奶蛙是不是实心的（透明处让鼠标穿过去）：直接读当前帧那个像素的透明度
