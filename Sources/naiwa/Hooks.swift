@@ -31,26 +31,33 @@ enum Hooks {
         return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/settings.json")
     }
 
-    /// PATH 上的 naiwa，找不到就用当前可执行文件的绝对路径
+    /// PATH 上的 naiwa，找不到就用当前可执行文件的绝对路径（原样，不带引号）
     static var binary: String {
-        let path = ProcessInfo.processInfo.environment["PATH"]?.split(separator: ":")
+        ProcessInfo.processInfo.environment["PATH"]?.split(separator: ":")
             .map { URL(fileURLWithPath: String($0)).appendingPathComponent("naiwa").path }
             .first { FileManager.default.isExecutableFile(atPath: $0) }
             ?? URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
-        return path.contains(" ") ? "'\(path)'" : path
     }
 
-    static var command: String { "\(binary) hook" }
+    /// 路径里有 shell 特殊字符就整段单引号括起来，里面的 ' 写成 '\''
+    static var command: String {
+        let plain = binary.allSatisfy { $0.isLetter || $0.isNumber || "/._-+@%:,=".contains($0) }
+        return (plain ? binary : "'" + binary.replacingOccurrences(of: "'", with: #"'\''"#) + "'") + " hook"
+    }
+
+    /// 带引号的 JSON 字符串，TOML 的基本字符串也认
+    static func quoted(_ s: String) -> String {
+        String(String(data: try! JSONSerialization.data(withJSONObject: [s], options: [.withoutEscapingSlashes]), encoding: .utf8)!
+            .dropFirst().dropLast())
+    }
 
     static func entry(matcher: Bool) -> String {
-        let cmd = String(data: try! JSONSerialization.data(withJSONObject: [command], options: [.withoutEscapingSlashes]), encoding: .utf8)!
-            .dropFirst().dropLast()
-        let hooks = #""hooks": [{"type": "command", "command": \#(cmd)}]"#
+        let hooks = #""hooks": [{"type": "command", "command": \#(quoted(command))}]"#
         return matcher ? #"{"matcher": "*", \#(hooks)}"# : "{\(hooks)}"
     }
 
-    /// 我们插进去的条目（含旧版只在 Stop 里放的 `naiwa laugh`），后面紧跟的逗号一起去掉
-    static let ours = #"\{("matcher": "\*", )?"hooks": \[\{"type": "command", "command": "[^"]*naiwa (hook|laugh)"\}\]\},?"#
+    /// 我们插进去的条目（含旧版只在 Stop 里放的 `naiwa laugh`；路径可能带引号），后面紧跟的逗号一起去掉
+    static let ours = #"\{("matcher": "\*", )?"hooks": \[\{"type": "command", "command": "([^"\\]|\\.)*naiwa'? (hook|laugh)"\}\]\},?"#
 
     static func install() throws {
         let fm = FileManager.default
@@ -156,7 +163,7 @@ enum Hooks {
           }
 
         Codex（~/.codex/config.toml 最上面，[xxx] 表之前；已经有 notify 的话只能留一个）：
-          notify = ["\(binary.replacingOccurrences(of: "'", with: ""))", "glance"]
+          notify = [\(quoted(binary)), "glance"]
 
         其他任何命令行：长任务后面接一句
           make build; naiwa glance
