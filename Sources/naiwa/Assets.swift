@@ -81,17 +81,18 @@ final class ClipPlayer {
         kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
         kCVPixelBufferIOSurfacePropertiesKey as String: [String: Any](),
     ])
+    private var playGeneration = 0
     private var onEnd: (() -> Void)?
     private var endObserver: NSObjectProtocol?
 
-    init(_ clip: Assets.Clip, fps: Double) {
+    init(_ clip: Assets.Clip, fps: Double, player: AVPlayer? = nil) {
         duration = Double(clip.frames) / fps
         item = AVPlayerItem(url: clip.video)
         item.add(output)
-        player = AVPlayer(playerItem: item)
-        player.actionAtItemEnd = .pause
-        player.isMuted = true
-        player.preventsDisplaySleepDuringVideoPlayback = false
+        self.player = player ?? AVPlayer(playerItem: item)
+        self.player.actionAtItemEnd = .pause
+        self.player.isMuted = true
+        self.player.preventsDisplaySleepDuringVideoPlayback = false
         endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
             let done = self?.onEnd
             self?.onEnd = nil
@@ -100,16 +101,28 @@ final class ClipPlayer {
     }
 
     deinit {
+        playGeneration += 1
         player.pause()
         endObserver.map(NotificationCenter.default.removeObserver)
     }
 
     func play(onEnd: @escaping () -> Void) {
+        dispatchPrecondition(condition: .onQueue(.main))
+        playGeneration += 1
+        let gen = playGeneration
         self.onEnd = onEnd
-        player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in self?.player.play() }
+        player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] finished in
+            // 与 play / stop 串行；回调到达后、主队列执行前的 stop 也必须让它失效。
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self, finished, self.playGeneration == gen else { return }
+                self.player.play()
+            }
+        }
     }
 
     func stop() {
+        dispatchPrecondition(condition: .onQueue(.main))
+        playGeneration += 1
         onEnd = nil
         player.pause()
     }
