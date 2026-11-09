@@ -24,11 +24,13 @@ enum Hooks {
         }
     }
 
+    /// 符号链接（dotfiles）解析到目标：读、备份、写都对目标做，链接本身不动
     static var settings: URL {
         if let path = ProcessInfo.processInfo.environment["NAIWA_CLAUDE_SETTINGS"] {
-            return URL(fileURLWithPath: path)
+            return URL(fileURLWithPath: path).resolvingSymlinksInPath()
         }
         return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/settings.json")
+            .resolvingSymlinksInPath()
     }
 
     /// PATH 上的 naiwa，找不到就用当前可执行文件的绝对路径
@@ -85,7 +87,7 @@ enum Hooks {
             try? fm.removeItem(atPath: backup)
             try fm.copyItem(atPath: settings.path, toPath: backup)
         }
-        try new.write(to: settings, atomically: true, encoding: .utf8)
+        try write(new)
         print("""
         已接入 Claude Code：\(settings.path)
           \(events.map(\.name).joined(separator: "、")) 各加了一条 `\(command)`（原文件备份在 .bak-naiwa）
@@ -107,8 +109,18 @@ enum Hooks {
         guard let parsed = try? parse(new), !containsOurs(parsed) else {
             throw Failure("settings.json 被重新排版过，找不到原样那几段。请手动删掉 hooks 里含 `naiwa` 的条目")
         }
-        try new.write(to: settings, atomically: true, encoding: .utf8)
+        try write(new)
         print("已撤掉：\(settings.path)")
+    }
+
+    /// 原子写会换成新文件（默认 0644），写完把原来的权限设回去；settings.json 里可能有 token
+    static func write(_ text: String) throws {
+        let fm = FileManager.default
+        let permissions = try? fm.attributesOfItem(atPath: settings.path)[.posixPermissions]
+        try text.write(to: settings, atomically: true, encoding: .utf8)
+        if let permissions {
+            try fm.setAttributes([.posixPermissions: permissions], ofItemAtPath: settings.path)
+        }
     }
 
     /// 在 hooks.<event> 数组开头插入；没有这个事件就在 hooks 里加；没有 hooks 就在最外层加
