@@ -17,6 +17,8 @@ final class Pet {
     private var schedule: Schedule
     private var scheduleStamp: Date?   // config.json 的修改时间，变了就重读（手改了文件不用重启）
     private var clips: [String: ClipPlayer] = [:]
+    /// 打不开的片段，不再建播放器
+    private var broken: Set<String> = []
     private let sessions = Sessions()
     private let bubble = Bubble()
     private var playing: (name: String, player: ClipPlayer, start: CFTimeInterval)?
@@ -148,7 +150,7 @@ final class Pet {
 
     private func clip(_ name: String) -> ClipPlayer? {
         if let c = clips[name] { return c }
-        guard let c = assets.clips[name] else { return nil }
+        guard !broken.contains(name), let c = assets.clips[name] else { return nil }
         clips[name] = ClipPlayer(c, fps: assets.fps)
         return clips[name]
     }
@@ -169,8 +171,14 @@ final class Pet {
         }
         c.play { [weak self] in
             guard let self, self.playing?.player === c else { return }
-            if loop { return self.play(name, loop: true) }
+            if loop, !c.failed { return self.play(name, loop: true) }
+            // 打不开的停下、去掉，不拿它重播（会空转）；循环的那只退回空闲的另一只，瞥照常收尾
+            if c.failed {
+                self.broken.insert(name)
+                self.clips[name] = nil
+            }
             self.stopPlaying()
+            if loop { self.shown = nil; self.render() }
             then?()
         }
     }
