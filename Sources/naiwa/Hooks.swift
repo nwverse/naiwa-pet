@@ -7,8 +7,8 @@ import Foundation
 /// 写之前解析新旧两份，确认除了这几条以外完全一样才落盘，并留一份备份。
 enum Hooks {
     static let events: [(name: String, matcher: Bool)] = [
-        ("UserPromptSubmit", false), ("PreToolUse", true), ("PostToolUse", true),
-        ("Notification", false), ("Stop", false), ("SessionEnd", false),
+        ("UserPromptSubmit", false), ("PreToolUse", true), ("PostToolUse", true), ("PostToolUseFailure", true),
+        ("Notification", false), ("Stop", false), ("StopFailure", false), ("SessionEnd", false),
     ]
 
     static func main(_ args: [String]) {
