@@ -54,7 +54,16 @@ enum Hooks {
 
     static func install() throws {
         let fm = FileManager.default
-        let original = (try? String(contentsOf: settings, encoding: .utf8)) ?? "{}\n"
+        // 只有文件不存在才从空对象开始；存在但读不出来就报错，不能当成空的覆盖掉
+        let original: String
+        if fm.fileExists(atPath: settings.path) {
+            guard let text = String(data: try Data(contentsOf: settings), encoding: .utf8) else {
+                throw Failure("\(settings.path) 不是 UTF-8 编码，没有写入。请先把它存成 UTF-8 再装")
+            }
+            original = text
+        } else {
+            original = "{}\n"
+        }
         // 先去掉旧的（包括旧版的 `naiwa laugh`），再整套重新装
         let text = original.replacingOccurrences(of: ours, with: "", options: .regularExpression)
         let old = try parse(text)
@@ -81,14 +90,16 @@ enum Hooks {
         }
         try fm.createDirectory(at: settings.deletingLastPathComponent(), withIntermediateDirectories: true)
         if fm.fileExists(atPath: settings.path) {
+            // 只留第一次接入前的原件：之后再装，当前文件可能已经是装过、撤过的版本
             let backup = settings.path + ".bak-naiwa"
-            try? fm.removeItem(atPath: backup)
-            try fm.copyItem(atPath: settings.path, toPath: backup)
+            if !fm.fileExists(atPath: backup) {
+                try fm.copyItem(atPath: settings.path, toPath: backup)
+            }
         }
         try new.write(to: settings, atomically: true, encoding: .utf8)
         print("""
         已接入 Claude Code：\(settings.path)
-          \(events.map(\.name).joined(separator: "、")) 各加了一条 `\(command)`（原文件备份在 .bak-naiwa）
+          \(events.map(\.name).joined(separator: "、")) 各加了一条 `\(command)`（第一次接入前的原文件备份在 .bak-naiwa）
           新开的 Claude Code 会话生效；已经开着的要重开
         """)
     }
