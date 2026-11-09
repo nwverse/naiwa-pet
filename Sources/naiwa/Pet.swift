@@ -337,6 +337,7 @@ final class Pet {
             origin = NSPoint(x: vf.maxX - size - 24, y: vf.minY)
         }
         panel.setFrame(NSRect(origin: origin ?? .zero, size: CGSize(width: size, height: size)), display: true)
+        followBubble()
     }
 
     func savePosition() { Prefs.origin = panel.frame.origin }
@@ -344,13 +345,22 @@ final class Pet {
     func followBubble() { bubble.follow(panel.frame, animated: false) }
 
     func resize(to size: CGFloat) {
-        // 脚底中点不动
+        // 脚底中点不动，放不下就往屏幕里挪
         let f = panel.frame
-        let origin = NSPoint(x: f.midX - size / 2, y: f.minY)
+        var r = NSRect(x: f.midX - size / 2, y: f.minY, width: size, height: size)
+        if let vf = (panel.screen ?? NSScreen.main)?.visibleFrame { r = Self.clamp(r, into: vf) }
         Prefs.size = size
-        Prefs.origin = origin
-        panel.setFrame(NSRect(origin: origin, size: CGSize(width: size, height: size)), display: true)
+        Prefs.origin = r.origin
+        panel.setFrame(r, display: true)
         followBubble()
+    }
+
+    /// 把 r 挪进 vf；比屏幕还宽就水平居中，比屏幕还高就贴底
+    static func clamp(_ r: NSRect, into vf: NSRect) -> NSRect {
+        var o = r.origin
+        o.x = r.width > vf.width ? vf.midX - r.width / 2 : min(max(o.x, vf.minX), vf.maxX - r.width)
+        o.y = r.height > vf.height ? vf.minY : min(max(o.y, vf.minY), vf.maxY - r.height)
+        return NSRect(origin: o, size: r.size)
     }
 
     func menu() -> NSMenu {
