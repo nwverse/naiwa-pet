@@ -153,6 +153,41 @@ final class SessionsTests: XCTestCase {
         XCTAssertEqual(sessions.mood, .working)
     }
 
+    func testDeniedApprovalIsReleasedWhenTheNextToolStarts() {
+        let sessions = Sessions()
+        _ = sessions.handle(event("UserPromptSubmit"))
+        _ = sessions.handle(event("PreToolUse", toolUseID: "tool-denied"))
+        _ = sessions.handle(notification("permission_prompt",
+                                         message: "Claude needs your permission to use Bash"))
+        XCTAssertEqual(sessions.mood, .waiting)
+
+        // The user denied it: Claude Code sends no PostToolUse for that tool, and the model carries on.
+        _ = sessions.handle(event("PreToolUse", toolUseID: "tool-next"))
+
+        XCTAssertEqual(sessions.mood, .working)
+        XCTAssertNil(sessions.waitingText)
+        XCTAssertEqual(sessions.all[sessionID]?.outstandingTools, ["tool-next"])
+
+        _ = sessions.handle(event("PostToolUse", toolUseID: "tool-next"))
+        XCTAssertEqual(sessions.all[sessionID]?.outstandingTools, [])
+    }
+
+    func testRunningParallelToolKeepsAnotherToolsApprovalWhenAThirdStarts() {
+        let sessions = Sessions()
+        _ = sessions.handle(event("UserPromptSubmit"))
+        _ = sessions.handle(event("PreToolUse", toolUseID: "tool-A"))
+        _ = sessions.handle(event("PreToolUse", toolUseID: "tool-B"))
+        _ = sessions.handle(notification("permission_prompt", toolUseID: "tool-A",
+                                         message: "Claude needs your permission to use Bash"))
+
+        // B is still running, so A may well still be waiting for the user.
+        _ = sessions.handle(event("PreToolUse", toolUseID: "tool-C"))
+
+        XCTAssertEqual(sessions.mood, .waiting)
+        XCTAssertEqual(sessions.waitingText, "project 等你批准 Bash")
+        XCTAssertEqual(sessions.all[sessionID]?.outstandingTools, ["tool-A", "tool-B", "tool-C"])
+    }
+
     private func event(_ name: String, toolUseID: String? = nil) -> [String: Any] {
         var event: [String: Any] = [
             "hook_event_name": name,

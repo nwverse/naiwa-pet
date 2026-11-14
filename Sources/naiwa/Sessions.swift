@@ -68,6 +68,14 @@ final class Sessions {
             s.latestToolUseID = nil
         case "PreToolUse":
             if let id = Self.requestID(e) {
+                // Only approvals are outstanding: a tool starting now means they were answered. A denied tool never
+                // gets a PostToolUse, so release it here rather than showing "等你批准" until Stop. While any other
+                // tool is still running the wait is kept, since parallel tools can legitimately wait for approval.
+                if s.outstandingTools.allSatisfy({ s.waiting[$0] != nil }) {
+                    for answered in s.outstandingTools { s.waiting[answered] = nil }
+                    s.outstandingTools.removeAll()
+                    s.waiting[Self.unassignedRequest] = nil
+                }
                 s.outstandingTools.insert(id)
                 s.latestToolUseID = id
                 s.waiting[id] = nil
