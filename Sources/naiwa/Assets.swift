@@ -60,7 +60,7 @@ struct Assets {
         if let res = Bundle.main.resourceURL {
             out.append(res.appendingPathComponent("assets"))
         }
-        var dir = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().deletingLastPathComponent()
+        var dir = CLI.executable().deletingLastPathComponent()
         // 经过 ~/.local/bin/naiwa 软链跑的时候 Bundle.main 认不出 App，按可执行文件的位置找 Contents/Resources/assets
         out.append(dir.deletingLastPathComponent().appendingPathComponent("Resources/assets"))
         for _ in 0..<5 {
@@ -83,7 +83,10 @@ final class ClipPlayer {
     ])
     private var playGeneration = 0
     private var onEnd: (() -> Void)?
-    private var endObserver: NSObjectProtocol?
+    private var endObservers: [NSObjectProtocol] = []
+    private var statusObserver: NSKeyValueObservation?
+    /// 打不开（文件不在、坏了）：这时也回报结束，不然等不到头
+    var failed: Bool { item.status == .failed }
 
     init(_ clip: Assets.Clip, fps: Double, player: AVPlayer? = nil) {
         duration = Double(clip.frames) / fps
@@ -93,17 +96,19 @@ final class ClipPlayer {
         self.player.actionAtItemEnd = .pause
         self.player.isMuted = true
         self.player.preventsDisplaySleepDuringVideoPlayback = false
-        endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
-            let done = self?.onEnd
-            self?.onEnd = nil
-            done?()
+        endObservers = [.AVPlayerItemDidPlayToEndTime, .AVPlayerItemFailedToPlayToEndTime].map {
+            NotificationCenter.default.addObserver(forName: $0, object: item, queue: .main) { [weak self] _ in self?.finish() }
+        }
+        statusObserver = item.observe(\.status) { [weak self] item, _ in
+            guard item.status == .failed else { return }
+            DispatchQueue.main.async { self?.finish() }
         }
     }
 
     deinit {
         playGeneration += 1
         player.pause()
-        endObserver.map(NotificationCenter.default.removeObserver)
+        endObservers.forEach(NotificationCenter.default.removeObserver)
     }
 
     func play(onEnd: @escaping () -> Void) {
@@ -111,6 +116,12 @@ final class ClipPlayer {
         playGeneration += 1
         let gen = playGeneration
         self.onEnd = onEnd
+        if failed {
+            return DispatchQueue.main.async { [weak self] in
+                guard let self, self.playGeneration == gen else { return }
+                self.finish()
+            }
+        }
         player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] finished in
             // 与 play / stop 串行；回调到达后、主队列执行前的 stop 也必须让它失效。
             DispatchQueue.main.async { [weak self] in
@@ -125,6 +136,12 @@ final class ClipPlayer {
         playGeneration += 1
         onEnd = nil
         player.pause()
+    }
+
+    private func finish() {
+        let done = onEnd
+        stop()
+        done?()
     }
 
     /// 当前该显示的新帧（BGRA、预乘透明度、IOSurface 做底）；没有新帧返回 nil

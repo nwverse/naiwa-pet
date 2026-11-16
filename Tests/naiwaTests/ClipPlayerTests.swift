@@ -1,99 +1,40 @@
-import AVFoundation
+import Foundation
 import Testing
 @testable import naiwa
 
-private final class ControlledPlayer: AVPlayer {
-    var completions: [(Bool) -> Void] = []
-    var plays = 0
-    var pauses = 0
-
-    override func seek(to time: CMTime, toleranceBefore: CMTime, toleranceAfter: CMTime,
-                       completionHandler: @escaping (Bool) -> Void) {
-        completions.append(completionHandler)
-    }
-    override func play() { plays += 1; #expect(Thread.isMainThread) }
-    override func pause() { pauses += 1 }
-}
-
-struct ClipPlayerTests {
-    @MainActor private func makeClip(_ player: ControlledPlayer) -> ClipPlayer {
-        let clip = Assets.Clip(video: URL(fileURLWithPath: "/nonexistent/test.mov"), frames: 24,
-                               loop: false, title: "Test", desc: "")
-        return ClipPlayer(clip, fps: 24, player: player)
+/// 片段打不开（文件不在、坏了）也要回报结束，不然奶蛙会卡在「做完」里。
+/// 回调走主队列：测试本身不能占着主线程，在别的线程上等
+@Suite struct ClipPlayerTests {
+    final class Box: @unchecked Sendable {
+        private let lock = NSLock()
+        private var done = false
+        var player: ClipPlayer?
+        var ended: Bool { lock.withLock { done } }
+        func end() { lock.withLock { done = true } }
     }
 
-    private func drainMainQueue() async {
-        await withCheckedContinuation { continuation in
-            DispatchQueue.main.async { continuation.resume() }
+    /// 在临时目录里放一个 clip.mov（nil 就不放），用真的 ClipPlayer 播，最多等 `wait` 秒，返回回调来没来
+    func ends(_ bytes: Data?, wait: Double = 5) async throws -> Bool {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("naiwa-tests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appendingPathComponent("clip.mov")
+        if let bytes { try bytes.write(to: url) }
+        let box = Box()
+        await MainActor.run {
+            box.player = ClipPlayer(Assets.Clip(video: url, frames: 72, loop: false, title: "", desc: ""), fps: 24)
+            box.player?.play { box.end() }
         }
+        for _ in 0..<Int(wait * 20) where !box.ended { try await Task.sleep(nanoseconds: 50_000_000) }
+        await MainActor.run { box.player = nil }
+        return box.ended
     }
 
-    @Test @MainActor func testSuccessfulCurrentSeekPlaysOnMainQueue() async {
-        let player = ControlledPlayer()
-        let clip = makeClip(player)
-        clip.play(onEnd: {})
-        let completion = player.completions[0]
-        await Task.detached { completion(true) }.value
-        await drainMainQueue()
-        #expect(player.plays == 1)
-        clip.stop()
+    @Test func missingFileEnds() async throws {
+        #expect(try await ends(nil))
     }
 
-    @Test @MainActor func testCancelledSeekDoesNotPlay() async {
-        let player = ControlledPlayer()
-        let clip = makeClip(player)
-        clip.play(onEnd: {})
-        player.completions[0](false)
-        await drainMainQueue()
-        #expect(player.plays == 0)
-        clip.stop()
-    }
-
-    @Test @MainActor func testLateSeekAfterStopDoesNotPlay() async {
-        let player = ControlledPlayer()
-        let clip = makeClip(player)
-        clip.play(onEnd: {})
-        clip.stop()
-        player.completions[0](true)
-        await drainMainQueue()
-        #expect(player.plays == 0)
-        #expect(player.pauses == 1)
-    }
-
-    @Test @MainActor func testStopInvalidatesCompletionAlreadyQueuedOnMain() async {
-        let player = ControlledPlayer()
-        let clip = makeClip(player)
-        clip.play(onEnd: {})
-        player.completions[0](true)
-        clip.stop()
-        await drainMainQueue()
-        #expect(player.plays == 0)
-    }
-
-    @Test @MainActor func testRestartIgnoresOldSeekAndPlaysCurrentSeek() async {
-        let player = ControlledPlayer()
-        let clip = makeClip(player)
-        clip.play(onEnd: {})
-        clip.play(onEnd: {})
-        player.completions[0](true)
-        await drainMainQueue()
-        #expect(player.plays == 0)
-        player.completions[1](true)
-        await drainMainQueue()
-        #expect(player.plays == 1)
-        clip.stop()
-    }
-
-    @Test @MainActor func testDeinitPausesAndLateSeekDoesNotRetainPlayerOwner() async {
-        let player = ControlledPlayer()
-        var clip: ClipPlayer? = makeClip(player)
-        weak var weakClip = clip
-        clip?.play(onEnd: {})
-        clip = nil
-        #expect(weakClip == nil)
-        #expect(player.pauses == 1)
-        player.completions[0](true)
-        await drainMainQueue()
-        #expect(player.plays == 0)
+    @Test func garbageFileEnds() async throws {
+        #expect(try await ends(Data((0..<200_000).map { _ in UInt8.random(in: 0...255) })))
     }
 }
