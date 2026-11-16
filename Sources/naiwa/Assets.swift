@@ -82,7 +82,10 @@ final class ClipPlayer {
         kCVPixelBufferIOSurfacePropertiesKey as String: [String: Any](),
     ])
     private var onEnd: (() -> Void)?
-    private var endObserver: NSObjectProtocol?
+    private var endObservers: [NSObjectProtocol] = []
+    private var statusObserver: NSKeyValueObservation?
+    /// 打不开（文件不在、坏了）：这时也回报结束，不然等不到头
+    var failed: Bool { item.status == .failed }
 
     init(_ clip: Assets.Clip, fps: Double) {
         duration = Double(clip.frames) / fps
@@ -92,26 +95,35 @@ final class ClipPlayer {
         player.actionAtItemEnd = .pause
         player.isMuted = true
         player.preventsDisplaySleepDuringVideoPlayback = false
-        endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
-            let done = self?.onEnd
-            self?.onEnd = nil
-            done?()
+        endObservers = [.AVPlayerItemDidPlayToEndTime, .AVPlayerItemFailedToPlayToEndTime].map {
+            NotificationCenter.default.addObserver(forName: $0, object: item, queue: .main) { [weak self] _ in self?.finish() }
+        }
+        statusObserver = item.observe(\.status) { [weak self] item, _ in
+            guard item.status == .failed else { return }
+            DispatchQueue.main.async { self?.finish() }
         }
     }
 
     deinit {
         player.pause()
-        endObserver.map(NotificationCenter.default.removeObserver)
+        endObservers.forEach(NotificationCenter.default.removeObserver)
     }
 
     func play(onEnd: @escaping () -> Void) {
         self.onEnd = onEnd
+        if failed { return DispatchQueue.main.async { [weak self] in self?.finish() } }
         player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in self?.player.play() }
     }
 
     func stop() {
         onEnd = nil
         player.pause()
+    }
+
+    private func finish() {
+        let done = onEnd
+        onEnd = nil
+        done?()
     }
 
     /// 当前该显示的新帧（BGRA、预乘透明度、IOSurface 做底）；没有新帧返回 nil
