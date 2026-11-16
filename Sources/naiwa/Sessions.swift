@@ -3,16 +3,24 @@ import Foundation
 /// 根据 Claude Code 的 hook 事件给每个会话记账，判断奶蛙该是什么状态、一轮结束时值不值得瞥你一眼。
 /// 全在本地算，不调模型。
 final class Sessions {
-    enum Mood { case idle, working, waiting }
+    enum Mood: Equatable { case idle, working, waiting }
     enum Tier { case none, big, huge }
+
+    struct Waiting {
+        let text: String
+        let seen: Date
+    }
 
     struct Session {
         var cwd: String
-        var start: Date?          // 这一轮开始干活的时间（用户发消息，或者第一次调工具）
-        var tools = 0             // 这一轮调了几次工具
-        var waiting: String?      // 在等你批准什么
-        var stopped: (start: Date?, tools: Int, glanced: Bool)?   // 上次 Stop 停下时这一轮的账：别的 Stop hook 可能拦下来让它接着干
-        var seen = Date()
+        var start: Date?                    // 这一轮开始干活的时间（用户发消息，或者第一次调工具）
+        var tools = 0                       // 这一轮调了几次工具
+        var waiting: [String: Waiting] = [:] // 按 tool/request ID 记在等你批准什么
+        var toolStarts: [String: Date] = [:] // 还没收到完成事件的 tool_use_id → 开始时间
+        var outstandingTools: Set<String> { Set(toolStarts.keys) }
+        var latestToolUseID: String?         // 无 ID 的权限通知归到最近的 PreToolUse
+        var stopped: (start: Date?, tools: Int, glanced: Bool)?
+        var seen: Date
     }
 
     struct Finished {
@@ -22,35 +30,51 @@ final class Sessions {
     }
 
     private(set) var all: [String: Session] = [:]
-    /// 现在几点；测试里换成假的
-    var now: () -> Date = Date.init
-    /// 半小时没动静就不算它还在干活
+    private static let unassignedRequest = ""
+    /// 没收到完成事件的工具最多算它还在跑这么久。工具被杀掉或被拒绝时没有 PostToolUse，不设上限会一直显示干活/等你。
+    /// 远大于 30 分钟，合法的长构建不受影响。
+    static let maxToolSeconds: TimeInterval = 6 * 3600
     static let expiry: TimeInterval = 1800
+    var now: () -> Date
+
+    init(now: @escaping () -> Date = { Date() }) {
+        self.now = now
+    }
 
     var mood: Mood {
         prune()
-        if all.values.contains(where: { $0.waiting != nil }) { return .waiting }
+        if all.values.contains(where: { !$0.waiting.isEmpty }) { return .waiting }
         if all.values.contains(where: { $0.start != nil }) { return .working }
         return .idle
     }
 
-    /// 下一个会话超时的时间，到点要重新看一次状态；没有在干活、等你的会话就是 nil
+    /// 有在跑的工具时等到工具的硬上限；否则按最后事件的半小时超时。
+    /// 不返回已过期的 deadline，避免主线程定时器在过去的时间反复触发。
     var nextExpiry: Date? {
-        all.values.filter { $0.start != nil || $0.waiting != nil }.map { $0.seen.addingTimeInterval(Self.expiry) }.min()
+        prune()
+        return all.values.compactMap { s -> Date? in
+            if let start = s.toolStarts.values.min() {
+                return start.addingTimeInterval(Self.maxToolSeconds)
+            }
+            guard s.start != nil || !s.waiting.isEmpty else { return nil }
+            return s.seen.addingTimeInterval(Self.expiry)
+        }.min()
     }
 
-    /// 等你的那个会话：项目名和在等什么
+    /// 等你的那个请求：项目名、在等什么；同一个会话也可能同时等好几个请求
     var waitingText: String? {
-        guard let s = all.values.filter({ $0.waiting != nil }).max(by: { $0.seen < $1.seen }) else { return nil }
-        return "\(Self.project(s.cwd)) \(s.waiting!)"
+        let requests = all.values.flatMap { s -> [(project: String, waiting: Waiting)] in
+            s.waiting.values.map { (Self.project(s.cwd), $0) }
+        }
+        guard let latest = requests.max(by: { $0.waiting.seen < $1.waiting.seen }) else { return nil }
+        return "\(latest.project) \(latest.waiting.text)"
     }
 
-    /// 处理一条 hook 事件；一轮结束时返回这一轮的结果。now 给测试用
+    /// 处理一条 hook 事件；一轮结束时返回这一轮的结果
     func handle(_ e: [String: Any], now eventTime: Date? = nil) -> Finished? {
         guard let event = e["hook_event_name"] as? String, let id = e["session_id"] as? String else { return nil }
         let now = eventTime ?? now()
-        var s = all[id] ?? Session(cwd: "")
-        // 事件里的 cwd 是会话当前目录，Claude cd 进子目录就跟着变；项目名只认第一次拿到的
+        var s = all[id] ?? Session(cwd: "", seen: now)
         if s.cwd.isEmpty, let cwd = e["cwd"] as? String { s.cwd = cwd }
         s.seen = now
         var finished: Finished?
@@ -58,43 +82,75 @@ final class Sessions {
         case "UserPromptSubmit":
             s.start = now
             s.tools = 0
-            s.waiting = nil
             s.stopped = nil
+            s.waiting.removeAll()
+            s.toolStarts.removeAll()
+            s.latestToolUseID = nil
         case "PreToolUse":
-            s.waiting = nil
+            if let id = Self.requestID(e) {
+                // Only approvals are outstanding: a tool starting now means they were answered. A denied tool never
+                // gets a PostToolUse, so release it here rather than showing "等你批准" until Stop. While any other
+                // tool is still running the wait is kept, since parallel tools can legitimately wait for approval.
+                if s.outstandingTools.allSatisfy({ s.waiting[$0] != nil }) {
+                    for answered in s.outstandingTools { s.waiting[answered] = nil }
+                    s.toolStarts.removeAll()
+                    s.waiting[Self.unassignedRequest] = nil
+                }
+                s.toolStarts[id] = now
+                s.latestToolUseID = id
+                s.waiting[id] = nil
+            } else {
+                // naiwa demo 和旧版事件没有 ID，保留原来的单请求演示行为
+                s.waiting[Self.unassignedRequest] = nil
+            }
             s.tools += 1
             if s.start == nil { s.start = now }
-        case "PostToolUse":
-            s.waiting = nil
-        case "PostToolUseFailure":
-            // 按 Esc 打断时没有 Stop，只有正在跑的工具报一个 is_interrupt 的失败：这一轮就算停了，不瞥
-            // 工具被新消息顶掉或 Ctrl+B 转后台也会带 is_interrupt，这时其实还在干，算错了也只是到下个事件为止
-            if e["is_interrupt"] as? Bool == true {
+        case "PostToolUse", "PostToolUseFailure":
+            if let id = Self.requestID(e) {
+                s.toolStarts[id] = nil
+                s.waiting[id] = nil
+                // 已经结束的工具不能再接收无 ID 的通知，否则下一个工具开始时清不掉这条等待
+                if s.latestToolUseID == id { s.latestToolUseID = nil }
+            }
+            // 完全没有 PreToolUse ID 的旧事件只能挂在未分配请求上
+            if s.outstandingTools.isEmpty {
+                s.waiting[Self.unassignedRequest] = nil
+            }
+            if event == "PostToolUseFailure", e["is_interrupt"] as? Bool == true,
+               s.outstandingTools.isEmpty {
                 s.start = nil
                 s.tools = 0
                 s.stopped = nil
+                s.waiting.removeAll()
+                s.latestToolUseID = nil
             }
-            s.waiting = nil
         case "StopFailure":
-            // API 出错结束的一轮（限流、认证失败之类）：发的是它不是 Stop，停下来但不瞥
             s.start = nil
             s.tools = 0
             s.stopped = nil
-            s.waiting = nil
+            s.waiting.removeAll()
+            s.toolStarts.removeAll()
+            s.latestToolUseID = nil
         case "Notification":
             switch Self.notification(type: e["notification_type"] as? String, message: e["message"] as? String ?? "") {
-            case .waiting(let text): s.waiting = text
-            case .answered: s.waiting = nil
+            case .waiting(let text):
+                let id = Self.requestID(e) ?? s.latestToolUseID ?? Self.unassignedRequest
+                s.waiting[id] = Waiting(text: text, seen: now)
+            case .answered:
+                if let id = Self.requestID(e) {
+                    s.waiting[id] = nil
+                } else {
+                    // 明确的完成/回复通知是旧版无 ID 事件唯一可靠的清除信号
+                    s.waiting.removeAll()
+                }
             case .ignore: break
             }
         case "Stop":
-            // 别的 Stop hook 拦下结束（decision: block）时 Claude 接着干同一轮，再停时带 stop_hook_active: true：
-            // 接上停下前的账，时长从最开始算、工具次数累加，一轮最多瞥一次
             var glanced = false
-            if e["stop_hook_active"] as? Bool == true, let p = s.stopped {
-                s.start = p.start ?? s.start
-                s.tools += p.tools
-                glanced = p.glanced
+            if e["stop_hook_active"] as? Bool == true, let previous = s.stopped {
+                s.start = previous.start ?? s.start
+                s.tools += previous.tools
+                glanced = previous.glanced
             }
             // naiwa_seconds：`naiwa demo` 用来假装这一轮跑了多久
             let seconds = e["naiwa_seconds"] as? Double ?? s.start.map { now.timeIntervalSince($0) } ?? 0
@@ -103,7 +159,9 @@ final class Sessions {
             s.stopped = (s.start, s.tools, glanced || tier != .none)
             s.start = nil
             s.tools = 0
-            s.waiting = nil
+            s.waiting.removeAll()
+            s.toolStarts.removeAll()
+            s.latestToolUseID = nil
         case "SessionEnd":
             all[id] = nil
             return nil
@@ -118,6 +176,13 @@ final class Sessions {
     static func tier(seconds: TimeInterval, tools: Int) -> Tier {
         guard tools > 0, seconds >= Prefs.bigSeconds else { return .none }
         return seconds >= Prefs.hugeSeconds ? .huge : .big
+    }
+
+    static func requestID(_ e: [String: Any]) -> String? {
+        for key in ["tool_use_id", "request_id"] {
+            if let id = e[key] as? String, !id.isEmpty { return id }
+        }
+        return nil
     }
 
     enum NotificationKind { case waiting(String), answered, ignore }
@@ -160,12 +225,25 @@ final class Sessions {
         return "\(s / 3600) 小时 \(s % 3600 / 60) 分"
     }
 
-    /// 会话没收到 Stop 就没了（Claude 被杀掉之类），半小时没动静就不算它还在干活
+    /// 会话没收到 Stop 就没了（Claude 被杀掉之类），半小时没动静就不算它还在干活。
+    /// 有 tool_use_id 还没完成的会话不是 abandoned：合法构建或测试可以超过半小时。
+    /// 没完成的工具超过 maxToolSeconds 也不再算（被杀掉或被拒绝的工具），之后会话按上面的规则清理。
     private func prune() {
         let now = now()
-        for (id, s) in all where (s.start != nil || s.waiting != nil) && now.timeIntervalSince(s.seen) >= Self.expiry {
+        for (id, s) in all {
+            let expired = s.toolStarts.filter { now.timeIntervalSince($0.value) >= Self.maxToolSeconds }.keys
+            for tool in expired {
+                all[id]?.toolStarts[tool] = nil
+                all[id]?.waiting[tool] = nil
+                if all[id]?.latestToolUseID == tool { all[id]?.latestToolUseID = nil }
+            }
+        }
+        for (id, s) in all where (s.start != nil || !s.waiting.isEmpty) && s.outstandingTools.isEmpty && now.timeIntervalSince(s.seen) >= Self.expiry {
             all[id]?.start = nil
-            all[id]?.waiting = nil
+            all[id]?.tools = 0
+            all[id]?.stopped = nil
+            all[id]?.waiting.removeAll()
+            all[id]?.latestToolUseID = nil
         }
     }
 }
