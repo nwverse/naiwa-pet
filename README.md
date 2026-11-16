@@ -134,7 +134,7 @@ defaults write com.nwverse.naiwa bigSeconds -float 30
 | `UserPromptSubmit` | 这一轮开始了，开始计时 |
 | `PreToolUse` / `PostToolUse` | 动了工具；要是刚才在等你批准，说明你批准了 |
 | `Notification` | 看 `notification_type`：`permission_prompt`、`elicitation_dialog`、`agent_needs_input` 算「等你」；`idle_prompt`（说完 60 秒你没理它）等其他提醒不算 |
-| `Stop` | 这一轮结束：跑满门槛并且动过工具就瞥你一眼，否则什么都不做 |
+| `Stop` | 这一轮结束：跑满门槛并且动过工具就瞥你一眼，否则什么都不做。别的 Stop hook 拦下来让它接着干（`stop_hook_active`）时算同一轮：时长从头算，一轮最多瞥一次 |
 | `SessionEnd` | 会话关了，不再记它 |
 
 已知局限：Claude 中途停下来等后台任务、或者停下来问你问题，从事件上看和「做完了」一样，只要时长够、动过工具也会有反应。

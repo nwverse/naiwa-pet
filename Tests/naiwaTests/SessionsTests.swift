@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import naiwa
 
-struct SessionsTests {
+struct SessionsProjectTests {
     func event(_ name: String, cwd: String?, _ extra: [String: Any] = [:]) -> [String: Any] {
         var e: [String: Any] = ["hook_event_name": name, "session_id": "s1"]
         if let cwd { e["cwd"] = cwd }
