@@ -15,7 +15,8 @@ final class Pet {
     let view: PetView
     private let assets: Assets
     private var schedule: Schedule
-    private var scheduleStamp: Date?   // config.json 的修改时间，变了就重读（手改了文件不用重启）
+    private let config: ScheduleStore
+    private var configWatcher: ScheduleWatcher?
     private var clips: [String: ClipPlayer] = [:]
     /// 打不开的片段，不再建播放器
     private var broken: Set<String> = []
@@ -39,8 +40,8 @@ final class Pet {
 
     init(assets: Assets) {
         self.assets = assets
-        schedule = Schedule.load(assets)
-        scheduleStamp = Self.stamp()
+        config = ScheduleStore(defaults: assets.defaults, known: Set(assets.loopPets))
+        schedule = config.current
         idleTurn = Int.random(in: 0..<12)
         panel = PetPanel(size: Prefs.size)
         view = PetView(frame: NSRect(x: 0, y: 0, width: Prefs.size, height: Prefs.size))
@@ -64,6 +65,7 @@ final class Pet {
                 self?.updateVisibility()
             }
         }
+        configWatcher = ScheduleWatcher { [weak self] in self?.reloadIfEdited() }
     }
 
     func show() {
@@ -245,15 +247,8 @@ final class Pet {
 
     // MARK: 安排（哪个时段出来哪几只、干活时是哪只）
 
-    private static func stamp() -> Date? {
-        (try? FileManager.default.attributesOfItem(atPath: Schedule.file.path))?[.modificationDate] as? Date
-    }
-
     private func reloadIfEdited() {
-        let now = Self.stamp()
-        guard now != scheduleStamp else { return }
-        scheduleStamp = now
-        use(Schedule.load(assets))
+        use(config.reload())
     }
 
     /// 换一套安排：正在演的空闲 / 干活那只要是被换掉了，回到当时该有的那只
@@ -269,12 +264,10 @@ final class Pet {
         render()
     }
 
-    private func change(_ edit: (inout Schedule) -> Void) {
-        var s = schedule
-        edit(&s)
-        try? s.save()
-        scheduleStamp = Self.stamp()
-        use(s)
+    private func change(_ edit: ScheduleStore.Edit) {
+        reloadIfEdited()
+        do { use(try config.apply(edit)) }
+        catch { bubble.show("配置未保存，请检查 config.json", above: panel.frame, for: 5) }
     }
 
     private func scheduleMenu() -> [NSMenuItem] {
@@ -285,7 +278,7 @@ final class Pet {
             let pets = NSMenu()
             for p in assets.loopPets {
                 let it = item("\(assets.title(p))　\(assets.clips[p]?.desc ?? "")") { [weak self] in
-                    self?.change { $0.toggle(p, inSlotFrom: slot.from) }
+                    self?.change(.toggle(p, from: slot.from))
                 }
                 it.state = slot.pets.contains(p) ? .on : .off
                 pets.addItem(it)
@@ -309,7 +302,7 @@ final class Pet {
 
         let work = NSMenu()
         for p in assets.loopPets {
-            let it = item("\(assets.title(p))　\(assets.clips[p]?.desc ?? "")") { [weak self] in self?.change { $0.work = p } }
+            let it = item("\(assets.title(p))　\(assets.clips[p]?.desc ?? "")") { [weak self] in self?.change(.work(p)) }
             it.state = schedule.work == p ? .on : .off
             work.addItem(it)
         }
@@ -320,9 +313,10 @@ final class Pet {
 
     /// 打开 config.json 改时段；还没有就先把现在的安排写出去
     private func openConfig() {
-        if !FileManager.default.fileExists(atPath: Schedule.file.path) {
-            try? schedule.save()
-            scheduleStamp = Self.stamp()
+        do { try config.createIfMissing() }
+        catch {
+            bubble.show("无法创建 config.json", above: panel.frame, for: 5)
+            return
         }
         NSWorkspace.shared.open(Schedule.file)
     }
@@ -394,6 +388,7 @@ final class Pet {
     }
 
     func menu() -> NSMenu {
+        reloadIfEdited()
         let m = NSMenu()
         m.addItem(item("瞥你一眼") { [weak self] in self?.glance() })
         let sizes = NSMenu()

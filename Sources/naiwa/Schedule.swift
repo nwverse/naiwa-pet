@@ -35,23 +35,7 @@ struct Schedule: Equatable {
 
     /// 用户的文件 + 默认：文件里没写或者写坏的部分用默认的
     static func load(_ assets: Assets) -> Schedule {
-        var s = assets.defaults
-        if let data = try? Data(contentsOf: file),
-           let j = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            let loops = Set(assets.loopPets)
-            if let mine = Schedule(json: j, known: loops) { s.idle = mine.idle }
-            if let w = j["work"] as? String, loops.contains(w) { s.work = w }
-        }
-        return s
-    }
-
-    func save() throws {
-        try FileManager.default.createDirectory(at: Self.file.deletingLastPathComponent(), withIntermediateDirectories: true)
-        // 给人手改的：一个时段一行
-        func str(_ v: Any) -> String { String(data: (try? JSONSerialization.data(withJSONObject: v, options: .fragmentsAllowed)) ?? Data(), encoding: .utf8) ?? "\"\"" }
-        let slots = idle.map { "    {\"from\": \($0.from), \"pets\": [" + $0.pets.map(str).joined(separator: ", ") + "]}" }
-        let text = "{\n  \"idle\": [\n" + slots.joined(separator: ",\n") + "\n  ],\n  \"work\": " + str(work) + "\n}\n"
-        try Data(text.utf8).write(to: Self.file, options: .atomic)
+        ScheduleStore(defaults: assets.defaults, known: Set(assets.loopPets)).current
     }
 
     /// 现在这个钟点的时段：from 不超过当前小时的最后一个；还没到第一个的 from，就接着用前一天最后那个

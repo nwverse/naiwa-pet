@@ -461,9 +461,10 @@ struct SessionsToolsTests {
         _ = sessions.handle(event("PreToolUse", toolUseID: "tool-old"))
         now.addTimeInterval(5 * 3600)
         _ = sessions.handle(event("PreToolUse", toolUseID: "tool-recent"))
+        now.addTimeInterval(3600 - 30)
         _ = sessions.handle(notification("permission_prompt", toolUseID: "tool-recent",
                                          message: "Claude needs your permission to use Bash"))
-        now.addTimeInterval(3600 + 1) // tool-old is past the cap, tool-recent is not
+        now.addTimeInterval(31) // tool-old is past the cap, tool-recent is not
 
         #expect(sessions.mood == .waiting)
         #expect(sessions.waitingText == "project 等你批准 Bash")
@@ -478,10 +479,11 @@ struct SessionsToolsTests {
         now.addTimeInterval(5 * 3600)
         // A running tool next to it: a new PreToolUse would otherwise release the lone approval.
         _ = sessions.handle(event("PreToolUse", toolUseID: "tool-recent"))
+        now.addTimeInterval(3600 - 30)
         _ = sessions.handle(notification("permission_prompt", toolUseID: "tool-old",
                                          message: "Claude needs your permission to use Bash"))
         #expect(sessions.mood == .waiting)
-        now.addTimeInterval(3600 + 1)
+        now.addTimeInterval(31)
 
         #expect(sessions.mood == .working)
         #expect(sessions.waitingText == nil)
