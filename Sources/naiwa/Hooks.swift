@@ -31,26 +31,36 @@ enum Hooks {
         return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/settings.json")
     }
 
-    /// PATH 上的 naiwa，找不到就用当前可执行文件的绝对路径
+    /// PATH 上的 naiwa，找不到就用当前可执行文件的绝对路径（原样，不带引号）
     static var binary: String {
-        let path = ProcessInfo.processInfo.environment["PATH"]?.split(separator: ":")
+        ProcessInfo.processInfo.environment["PATH"]?.split(separator: ":")
             .map { URL(fileURLWithPath: String($0)).appendingPathComponent("naiwa").path }
             .first { FileManager.default.isExecutableFile(atPath: $0) }
-            ?? URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
-        return path.contains(" ") ? "'\(path)'" : path
+            ?? CLI.executable().path
     }
 
-    static var command: String { "\(binary) hook" }
+    /// 路径里有 shell 特殊字符就整段单引号括起来，里面的 ' 写成 '\''
+    static var command: String {
+        let plain = binary.allSatisfy { $0.isLetter || $0.isNumber || "/._-+@%:,=".contains($0) }
+        return (plain ? binary : "'" + binary.replacingOccurrences(of: "'", with: #"'\''"#) + "'") + " hook"
+    }
+
+    /// 带引号的 JSON 字符串，TOML 的基本字符串也认
+    static func quoted(_ s: String) -> String {
+        String(String(data: try! JSONSerialization.data(withJSONObject: [s], options: [.withoutEscapingSlashes]), encoding: .utf8)!
+            .dropFirst().dropLast())
+    }
 
     static func entry(matcher: Bool) -> String {
-        let cmd = String(data: try! JSONSerialization.data(withJSONObject: [command], options: [.withoutEscapingSlashes]), encoding: .utf8)!
-            .dropFirst().dropLast()
-        let hooks = #""hooks": [{"type": "command", "command": \#(cmd)}]"#
+        let hooks = #""hooks": [{"type": "command", "command": \#(quoted(command))}]"#
         return matcher ? #"{"matcher": "*", \#(hooks)}"# : "{\(hooks)}"
     }
 
-    /// 我们插进去的条目（含旧版只在 Stop 里放的 `naiwa laugh`），后面紧跟的逗号一起去掉
-    static let ours = #"\{("matcher": "\*", )?"hooks": \[\{"type": "command", "command": "[^"]*naiwa (hook|laugh)"\}\]\},?"#
+    /// 我们插进去的条目（含旧版只在 Stop 里放的 `naiwa laugh`；路径可能带引号）
+    static let ours = separated(#"\{("matcher": "\*", )?"hooks": \[\{"type": "command", "command": "([^"\\]|\\.)*naiwa'? (hook|laugh)"\}\]\}"#)
+
+    /// 连同分隔的逗号一起去掉：前面有逗号去前面的（它可能是最后一个），否则去后面的
+    static func separated(_ pattern: String) -> String { #",\s*\#(pattern)|\#(pattern)\s*,?"# }
 
     static func install() throws {
         let fm = FileManager.default
@@ -81,7 +91,7 @@ enum Hooks {
         }
         var expected = old
         expected["hooks"] = expectedHooks
-        guard NSDictionary(dictionary: try parse(new)).isEqual(to: expected) else {
+        guard NSDictionary(dictionary: try parse(new, strict: true)).isEqual(to: expected) else {
             throw Failure("插入后内容和预期不一致，没有写入。请手动加，见 `naiwa hooks`")
         }
         if new == original {
@@ -113,9 +123,9 @@ enum Hooks {
         var new = text.replacingOccurrences(of: ours, with: "", options: .regularExpression)
         // 撤掉后剩下的空数组一起去掉（多是安装时新建的；空数组和没有这个键效果一样）
         for e in events {
-            new = new.replacingOccurrences(of: #""\#(e.name)": \[\],?"#, with: "", options: .regularExpression)
+            new = new.replacingOccurrences(of: separated(#""\#(e.name)": \[\]"#), with: "", options: .regularExpression)
         }
-        guard let parsed = try? parse(new), !containsOurs(parsed) else {
+        guard let parsed = try? parse(new, strict: true), !containsOurs(parsed) else {
             throw Failure("settings.json 被重新排版过，找不到原样那几段。请手动删掉 hooks 里含 `naiwa` 的条目")
         }
         try new.write(to: settings, atomically: true, encoding: .utf8)
@@ -151,11 +161,29 @@ enum Hooks {
         }
     }
 
-    static func parse(_ text: String) throws -> [String: Any] {
+    /// strict：JSONSerialization 放过 `,]` `,}` 这种多余的逗号，要落盘的内容另外查一遍
+    static func parse(_ text: String, strict: Bool = false) throws -> [String: Any] {
         guard let obj = try JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any] else {
             throw Failure("settings.json 不是一个 JSON 对象")
         }
+        if strict && hasTrailingComma(text) { throw Failure("settings.json 里有多余的逗号") }
         return obj
+    }
+
+    /// 跳过字符串，看 `]` `}` 前面最近的非空白字符是不是逗号
+    static func hasTrailingComma(_ text: String) -> Bool {
+        var inString = false, escaped = false, last: Character = " "
+        for c in text {
+            if inString {
+                if escaped { escaped = false } else if c == "\\" { escaped = true } else if c == "\"" { inString = false }
+                continue
+            }
+            if c.isWhitespace { continue }
+            if (c == "]" || c == "}") && last == "," { return true }
+            if c == "\"" { inString = true }
+            last = c
+        }
+        return false
     }
 
     static func printSnippets() {
@@ -167,7 +195,7 @@ enum Hooks {
           }
 
         Codex（~/.codex/config.toml 最上面，[xxx] 表之前；已经有 notify 的话只能留一个）：
-          notify = ["\(binary.replacingOccurrences(of: "'", with: ""))", "glance"]
+          notify = [\(quoted(binary)), "glance"]
 
         其他任何命令行：长任务后面接一句
           make build; naiwa glance
