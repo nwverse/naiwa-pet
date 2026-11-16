@@ -36,7 +36,7 @@ enum Hooks {
         ProcessInfo.processInfo.environment["PATH"]?.split(separator: ":")
             .map { URL(fileURLWithPath: String($0)).appendingPathComponent("naiwa").path }
             .first { FileManager.default.isExecutableFile(atPath: $0) }
-            ?? URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
+            ?? CLI.executable().path
     }
 
     /// 路径里有 shell 特殊字符就整段单引号括起来，里面的 ' 写成 '\''
