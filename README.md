@@ -67,7 +67,13 @@ https://github.com/user-attachments/assets/3b57d454-f4c0-4b1f-8327-81961681a8f9
 
 ## 安装
 
-需要 macOS 13 以上，以及 Command Line Tools（没装的话运行 `xcode-select --install`）。不需要 Xcode。
+需要 macOS 13 及以上。
+
+**下载通用安装包**：从 [Releases](https://github.com/nwverse/naiwa-pet/releases/latest) 下载 ZIP，解压后把 `Naiwa.app` 放进 `~/Applications` 并打开，同时支持 Apple 芯片和 Intel。升级时先退出旧版再替换 App；旧版用户更新后重新运行一次 `naiwa hooks install`。没有命令行链接时，用 `~/Applications/Naiwa.app/Contents/MacOS/naiwa hooks install` 接入。
+
+下载包使用 ad-hoc 签名，尚未经过 Developer ID 签名或 Apple 公证，首次打开可能被 macOS 拦截。
+
+**从源码安装**：需要 Command Line Tools（没装的话运行 `xcode-select --install`），不需要 Xcode。以下脚本会配置命令行和登录自启：
 
 ```bash
 git clone https://github.com/nwverse/naiwa-pet.git
@@ -163,11 +169,15 @@ defaults write com.nwverse.naiwa bigSeconds -float 30
 
 ### PR 检查与自动合并
 
-PR 会运行 `macOS checks`：检查脚本语法和素材配置 JSON，编译 Apple 芯片与 Intel 版本，打包通用 App，并验证架构、签名和 `pets` 命令。
+PR 会运行 `macOS checks`：检查脚本语法和素材配置 JSON，运行回归测试，编译 Apple 芯片与 Intel 版本，打包通用 App，并验证架构、签名和 `pets` 命令。
 
 维护者给面向 `main` 的非草稿 PR 加上 `automerge` 标签后，会开启自动 squash 合并。必须通过检查、与最新 `main` 同步，并解决所有 review 对话，才会合入；分支落后时先点 **Update branch**，更新后会重新检查。首次贡献者的工作流可能需要维护者先批准运行。
 
 移除 `automerge` 标签、转为草稿或改投其他分支，会取消等待中的自动合并。不加标签的 PR 仍由维护者手动合并。CI 不验证桌面上的播放、锁屏停播和鼠标穿透；相关改动仍须按 `AGENTS.md` 在真机确认，再加标签。
+
+### 发布版本
+
+先通过 PR 更新 `VERSION` 和对应的 `docs/releases/v版本号.md`，合入 `main` 后，在该提交上推送同名 `v版本号` 标签。`Release` 工作流会核对标签、版本和主分支来源，运行回归测试、构建并验证通用 App，再发布 ZIP 和 `SHA256SUMS.txt`。只有附件上传完整后才公开 Release；已有 Release 不会被自动覆盖。
 
 ### 本地构建
 

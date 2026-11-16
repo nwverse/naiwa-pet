@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION=${VERSION:-0.1.0}
+VERSION=${VERSION:-$(cat VERSION)}
 APP=build/Naiwa.app
 
 # 两种芯片都编一份再合并；Intel 那份编不出来就只发本机架构
