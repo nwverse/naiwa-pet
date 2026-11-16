@@ -76,7 +76,8 @@ struct ScheduleStoreTests {
         let text = #"{"idle":[{"from":12,"pets":["sleep"]}]}"#
         try withStore(text) { store, file in
             #expect(throws: (any Error).self) { try store.apply(.toggle("listen", from: 0)) }
-            #expect(try Data(contentsOf: file) == Data(text.utf8))
+            let unchanged = try Data(contentsOf: file)
+            #expect(unchanged == Data(text.utf8))
         }
     }
 

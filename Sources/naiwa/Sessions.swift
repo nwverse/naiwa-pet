@@ -9,6 +9,7 @@ final class Sessions {
     struct Waiting {
         let text: String
         let seen: Date
+        let expiresAt: Date?
     }
 
     struct Session {
@@ -50,6 +51,8 @@ final class Sessions {
     /// 远大于 30 分钟，合法的长构建不受影响。
     static let maxToolSeconds: TimeInterval = 6 * 3600
     static let expiry: TimeInterval = 1800
+    /// 批准没有对应 hook：权限提示只短暂提醒，不把长任务一直显示成待批准。
+    static let permissionReminderSeconds: TimeInterval = 60
     var now: () -> Date
 
     init(now: @escaping () -> Date = { Date() }) {
@@ -67,17 +70,20 @@ final class Sessions {
     /// 不返回已过期的 deadline，避免主线程定时器在过去的时间反复触发。
     var nextExpiry: Date? {
         prune()
-        return all.values.compactMap { s -> Date? in
+        return all.values.flatMap { s -> [Date] in
+            var deadlines = s.waiting.values.compactMap(\.expiresAt)
             if let start = s.toolStarts.values.min() {
-                return start.addingTimeInterval(Self.maxToolSeconds)
+                deadlines.append(start.addingTimeInterval(Self.maxToolSeconds))
+            } else if s.start != nil || !s.waiting.isEmpty {
+                deadlines.append(s.seen.addingTimeInterval(Self.expiry))
             }
-            guard s.start != nil || !s.waiting.isEmpty else { return nil }
-            return s.seen.addingTimeInterval(Self.expiry)
+            return deadlines
         }.min()
     }
 
     /// 等你的那个请求：项目名、在等什么；同一个会话也可能同时等好几个请求
     var waitingText: String? {
+        prune()
         let requests = all.values.flatMap { s -> [(project: String, waiting: Waiting)] in
             s.waiting.values.map { (Self.project(s.cwd), $0) }
         }
@@ -144,9 +150,10 @@ final class Sessions {
             s.clearTools()
         case "Notification":
             switch Self.notification(type: e["notification_type"] as? String, message: e["message"] as? String ?? "") {
-            case .waiting(let text):
+            case .waiting(let text, let permission):
                 let id = Self.requestID(e) ?? Self.owner(of: text, in: s)
-                s.waiting[id] = Waiting(text: text, seen: now)
+                s.waiting[id] = Waiting(text: text, seen: now,
+                                        expiresAt: permission ? now.addingTimeInterval(Self.permissionReminderSeconds) : nil)
             case .answered:
                 if let id = Self.requestID(e) {
                     s.waiting[id] = nil
@@ -210,23 +217,23 @@ final class Sessions {
         return s.toolStarts.count == 1 ? s.toolStarts.keys.first! : unassignedRequest
     }
 
-    enum NotificationKind { case waiting(String), answered, ignore }
+    enum NotificationKind { case waiting(String, permission: Bool), answered, ignore }
 
     /// 只有真的卡在你身上才算「等你」：要权限、MCP 弹表单问你、后台会话等你回话。
     /// Claude 说完 60 秒你没理它（idle_prompt）、登录成功之类都不算，不然做完的会话放着不管，奶蛙会一直盯着你。
     static func notification(type: String?, message: String) -> NotificationKind {
         switch type {
         case "permission_prompt":
-            return .waiting(permissionText(message))
+            return .waiting(permissionText(message), permission: true)
         case "elicitation_dialog", "elicitation_url_dialog", "agent_needs_input":
-            return .waiting("等你回复")
+            return .waiting("等你回复", permission: false)
         case "elicitation_complete", "elicitation_response":
             return .answered
         case .some:
             return .ignore
         case nil:
             // 老版本 Claude Code 没有 notification_type：只认明确提到权限的
-            return message.localizedCaseInsensitiveContains("permission") ? .waiting(permissionText(message)) : .ignore
+            return message.localizedCaseInsensitiveContains("permission") ? .waiting(permissionText(message), permission: true) : .ignore
         }
     }
 
@@ -256,6 +263,9 @@ final class Sessions {
     private func prune() {
         let now = now()
         for (id, s) in all {
+            for (request, wait) in s.waiting where wait.expiresAt.map({ $0 <= now }) == true {
+                all[id]?.waiting[request] = nil
+            }
             let expired = s.toolStarts.filter { now.timeIntervalSince($0.value) >= Self.maxToolSeconds }.keys
             for tool in expired {
                 all[id]?.finishTool(tool)

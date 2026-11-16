@@ -67,10 +67,13 @@ enum CLI {
         print("空闲：这个时段的奶蛙在慢慢地动")
         usleep(3_000_000)
         event("UserPromptSubmit", wait: 0.3, "Claude 开始干活：沉溺奶蛙，闭着眼悬浮在水里")
-        event("PreToolUse", wait: 6)
+        let tool: [String: Any] = ["tool_use_id": "demo-bash", "tool_name": "Bash"]
+        event("PreToolUse", tool, wait: 6)
         event("Notification", ["message": "Claude needs your permission to use Bash", "notification_type": "permission_prompt"], wait: 6,
               "等你批准：睁开眼转过来看着你")
-        event("PreToolUse", wait: 3, "批准了：接着沉进去干")
+        print("假设此时批准：Claude 不发批准事件，提醒会保留到工具结束或 60 秒上限")
+        usleep(3_000_000)
+        event("PostToolUse", tool, wait: 3, "工具完成：清掉权限提醒，继续处理结果")
         event("Stop", ["naiwa_seconds": 125.0], wait: 6, "干完一个活（假装跑了 2 分钟）：惊鸿一瞥，瞥完回到空闲")
         event("SessionEnd", wait: 0)
     }
