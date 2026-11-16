@@ -233,7 +233,7 @@ struct SessionsToolsTests {
             Issue.record("Stop should finish the original session")
             return
         }
-        #expect(abs(finished.seconds - Sessions.maxToolSeconds - 60) <= 0.001)
+        #expect(abs(finished.seconds - (Sessions.maxToolSeconds - 60)) <= 0.001)
     }
 
     @Test func testDeniedToolNextToRunningToolIsDroppedByTheHardCap() {
