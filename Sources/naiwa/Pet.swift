@@ -140,11 +140,21 @@ final class Pet {
 
     /// 这个时段该出来的那只。鼠标换过就是换出来的那只；已经在演这个时段的某一只就不换；同一时段有几只，每回到空闲换下一只
     private func idleClip() -> String {
-        if let p = picked, assets.clips[p] != nil { return p }
         let names = schedule.slot().pets
-        if let s = shown, names.contains(s) { return s }
-        idleTurn += 1
-        return names[idleTurn % names.count]
+        let validPick = picked.flatMap { assets.clips[$0] != nil ? $0 : nil }
+        return Self.idleCandidate(picked: validPick, shown: shown, names: names,
+                                  broken: broken, turn: &idleTurn) ?? names[0]
+    }
+
+    /// 坏掉的悬停选择和时段候选都跳过；没有可播的候选就让调用方停播。
+    static func idleCandidate(picked: String?, shown: String?, names: [String],
+                              broken: Set<String>, turn: inout Int) -> String? {
+        if let picked, !broken.contains(picked) { return picked }
+        let available = names.filter { !broken.contains($0) }
+        guard !available.isEmpty else { return nil }
+        if let shown, available.contains(shown) { return shown }
+        turn += 1
+        return available[turn % available.count]
     }
 
     // MARK: 片段
