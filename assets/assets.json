@@ -2,14 +2,21 @@
  "fps": 24,
  "pets": [
   "sleep",
+  "sleep_look",
+  "sleep_done",
   "listen",
   "relax",
   "cloud",
+  "cloud_look",
   "fish",
   "lonely",
   "wires",
   "clothespin",
+  "clothespin_look",
+  "clothespin_done",
   "balloons",
+  "balloons_look",
+  "balloons_done",
   "float",
   "flowers",
   "ripple",
@@ -23,7 +30,9 @@
    "frames": 109,
    "loop": true,
    "title": "沉溺",
-   "desc": "闭着眼悬浮在水里"
+   "desc": "闭着眼悬浮在水里",
+   "look": "look",
+   "done": "glance"
   },
   "look": {
    "video": "look.mov",
@@ -44,14 +53,17 @@
    "frames": 109,
    "loop": true,
    "title": "云幻",
-   "desc": "晚霞里一团云做的奶蛙"
+   "desc": "晚霞里一团云做的奶蛙",
+   "look": "cloud_look"
   },
   "sleep": {
    "video": "sleep.mov",
    "frames": 120,
    "loop": true,
    "title": "安睡",
-   "desc": "趴在一朵云上睡觉"
+   "desc": "趴在一朵云上睡觉",
+   "look": "sleep_look",
+   "done": "sleep_done"
   },
   "listen": {
    "video": "listen.mov",
@@ -86,14 +98,18 @@
    "frames": 109,
    "loop": true,
    "title": "晾衣",
-   "desc": "被晾衣夹夹在绳子上晃"
+   "desc": "被晾衣夹夹在绳子上晃",
+   "look": "clothespin_look",
+   "done": "clothespin_done"
   },
   "balloons": {
    "video": "balloons.mov",
    "frames": 109,
    "loop": true,
    "title": "气球",
-   "desc": "被一串气球吊着飘"
+   "desc": "被一串气球吊着飘",
+   "look": "balloons_look",
+   "done": "balloons_done"
   },
   "float": {
    "video": "float.mov",
@@ -122,6 +138,55 @@
    "loop": false,
    "title": "惊鸿一瞥",
    "desc": "镜头推近，它斜着瞥你一眼"
+  },
+  "clothespin_look": {
+   "video": "clothespin_look.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "晾衣 · 看着你",
+   "desc": "睁开眼抬起头看着你"
+  },
+  "clothespin_done": {
+   "video": "clothespin_done.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "晾衣 · 扑腾",
+   "desc": "小手小脚在空中扑腾两下"
+  },
+  "cloud_look": {
+   "video": "cloud_look.mov",
+   "frames": 96,
+   "loop": false,
+   "title": "云幻 · 看着你",
+   "desc": "转过头来看着你"
+  },
+  "balloons_look": {
+   "video": "balloons_look.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "气球 · 看着你",
+   "desc": "睁开眼转过来看着你"
+  },
+  "balloons_done": {
+   "video": "balloons_done.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "气球 · 飘一下",
+   "desc": "被气球带着往上飘一下，又落回来"
+  },
+  "sleep_look": {
+   "video": "sleep_look.mov",
+   "frames": 104,
+   "loop": false,
+   "title": "安睡 · 看着你",
+   "desc": "迷迷糊糊睁开眼看着你"
+  },
+  "sleep_done": {
+   "video": "sleep_done.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "安睡 · 蹭一蹭",
+   "desc": "在梦里蹭蹭云朵，又睡熟了"
   }
  },
  "idle": [
@@ -157,7 +222,6 @@
    ]
   }
  ],
- "work": "immerse",
- "look": "look",
+ "work": "slot",
  "done": "glance"
 }

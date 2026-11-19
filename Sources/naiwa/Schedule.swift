@@ -2,13 +2,17 @@ import Foundation
 
 /// 每个人自己的安排：一天里哪个时段出来哪几只、干活时是哪只。
 /// 存在 ~/.config/naiwa/config.json，可以在右键菜单里勾，也可以手改、发给别人；没有这个文件就用素材自带的默认安排。
-///   {"idle": [{"from": 0, "pets": ["lonely"]}, {"from": 6, "pets": ["sleep"]}, …], "work": "immerse"}
-/// from 是这个时段从几点开始（本地时间，0–23），到下一个时段的 from 为止；同一时段写几只，每回到空闲轮流出来一只。
+///   {"idle": [{"from": 0, "pets": ["lonely"]}, {"from": 6, "pets": ["sleep"]}, …], "work": "slot"}
+/// from 是这个时段从几点开始（本地时间，0–23），到下一个时段的 from 为止；同一时段写几只，每干完一轮回到空闲轮流出来一只。
+/// work 写 "slot" 是跟着时段：空闲时是哪只，干活、等你、做完还是哪只；写某只的名字就固定是那只。
 struct Schedule: Equatable {
     struct Slot: Equatable {
         var from: Int
         var pets: [String]
     }
+
+    /// work 的特殊值：跟着时段
+    static let followSlot = "slot"
 
     var idle: [Slot]
     var work: String

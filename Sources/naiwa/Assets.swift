@@ -4,13 +4,16 @@ import AVFoundation
 /// 素材目录：
 ///   assets.json  {"fps": 24,
 ///                 "pets": ["sleep", "listen", …],
-///                 "clips": {"listen": {"video": "listen.mov", "frames": 96, "loop": true, "title": "听歌", "desc": "…"}, …},
+///                 "clips": {"relax": {"video": "relax.mov", "frames": 109, "loop": true, "title": "悠闲", "desc": "…",
+///                                     "look": "relax_look", "done": "relax_glance"},
+///                           "relax_look": {"video": "relax_look.mov", "frames": 60, "loop": false, …}, …},
 ///                 "idle": [{"from": 12, "pets": ["listen", "relax"]}, …],
-///                 "work": "immerse", "look": "look", "done": "glance"}
+///                 "work": "slot", "done": "glance"}
 ///   *.mov        带透明通道的 HEVC（预乘透明度）
 ///   pets         有哪几只（菜单里的顺序）；循环的那些空闲、干活都能用
 ///   idle / work  默认的安排，用户可以在 ~/.config/naiwa/config.json 里换（见 Schedule）
-///   look / done  等你（播完停在最后一帧）/ 做完（惊鸿一瞥）
+///   clip 的 look / done  这只自己的等你（播完停在最后一帧，一直看着你）/ 做完、点它（瞥你一眼）
+///   done         没有自己「做完」片段的奶蛙用这段
 struct Assets {
     struct Clip {
         let video: URL
@@ -18,18 +21,37 @@ struct Assets {
         let loop: Bool
         let title: String
         let desc: String
+        var look: String? = nil
+        var done: String? = nil
     }
 
     let fps: Double
     let clips: [String: Clip]
     let pets: [String]
     let defaults: Schedule
-    let look: String, done: String
+    let done: String
 
     /// 能拿来空闲、干活的（循环的）那几只
     var loopPets: [String] { pets.filter { clips[$0]?.loop == true } }
 
     func title(_ name: String) -> String { clips[name]?.title ?? name }
+
+    /// 这只等你时演哪段：有自己的「看着你」就用；没有就还是它自己，只冒气泡（不换成别的奶蛙）
+    func look(for pet: String) -> String {
+        clips[pet]?.look.flatMap { clips[$0] != nil ? $0 : nil } ?? pet
+    }
+
+    /// 这只做完、被点被摸时演哪段：有自己的就用；没有但有「看着你」，就睁眼看你一下再回去；都没有才用默认的那段
+    func done(for pet: String?) -> String {
+        guard let pet, let c = clips[pet] else { return done }
+        return [c.done, c.look].compactMap { $0 }.first { clips[$0] != nil } ?? done
+    }
+
+    /// 片段是哪只的：look / done 片段算到它那只上，循环的就是它自己
+    func owner(of clip: String) -> String? {
+        if clips[clip]?.loop == true { return clip }
+        return loopPets.first { clips[$0]?.look == clip || clips[$0]?.done == clip }
+    }
 
     static func load() -> Assets? {
         for dir in candidates() {
@@ -40,13 +62,14 @@ struct Assets {
             for (name, c) in list {
                 guard let video = c["video"] as? String else { continue }
                 clips[name] = Clip(video: dir.appendingPathComponent(video), frames: c["frames"] as? Int ?? 0, loop: c["loop"] as? Bool ?? false,
-                                   title: c["title"] as? String ?? name, desc: c["desc"] as? String ?? "")
+                                   title: c["title"] as? String ?? name, desc: c["desc"] as? String ?? "",
+                                   look: c["look"] as? String, done: c["done"] as? String)
             }
             let pets = (j["pets"] as? [String] ?? clips.keys.sorted()).filter { clips[$0] != nil }
             let defaults = Schedule(json: j, known: Set(clips.keys))
-            let look = j["look"] as? String ?? "", done = j["done"] as? String ?? ""
+            let done = j["done"] as? String ?? ""
             guard let defaults, clips[done] != nil else { continue }
-            return Assets(fps: j["fps"] as? Double ?? 24, clips: clips, pets: pets, defaults: defaults, look: look, done: done)
+            return Assets(fps: j["fps"] as? Double ?? 24, clips: clips, pets: pets, defaults: defaults, done: done)
         }
         return nil
     }

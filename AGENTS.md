@@ -1,6 +1,6 @@
 # AGENTS.md
 
-naiwa-pet：macOS 桌面上的奶蛙。空闲时按一天的时段换一只慢慢地动，Claude Code 干活时沉溺在水里、等你时睁眼转过来看你、干完惊鸿一瞥（镜头推近，斜着瞥你一眼）。用法见 [README.md](README.md)。
+naiwa-pet：macOS 桌面上的奶蛙。空闲时按一天的时段换一只慢慢地动，Claude Code 干活时默认还是这只、等你时它睁眼看你、干完或被点被摸时它按自己的场景回你一下（沉溺奶蛙是惊鸿一瞥：镜头推近，斜着瞥你一眼）。用法见 [README.md](README.md)。
 
 ## 约定
 
@@ -14,7 +14,8 @@ naiwa-pet：macOS 桌面上的奶蛙。空闲时按一天的时段换一只慢�
 - `[必须]` 奶蛙保持原梗的样子：不穿衣戴帽、不换脸。换新画先给维护者看静帧。`[禁止]` 用自建的 3D 模型或手写动作代替，笑起来不像。
 - `[禁止]` 加声音：吵。
 - `[禁止]` README 里写参考了哪个项目、用了哪些工具和服务、素材是怎么做出来的。
-- `[必须]` 哪个时段出来哪几只、干活时是哪只要能让用户自己换：默认安排在 `assets/assets.json` 的 `idle` / `work`，用户的在 `~/.config/naiwa/config.json`（右键菜单读写、手改自动生效）。新加的奶蛙进 `assets.json` 的 `pets` 和 `clips` 就会出现在菜单里，不要在代码里写死名字。
+- `[必须]` 哪个时段出来哪几只、干活时是哪只要能让用户自己换：默认安排在 `assets/assets.json` 的 `idle` / `work`（`work` 为 `slot` 是跟着时段），用户的在 `~/.config/naiwa/config.json`（右键菜单读写、手改自动生效）。新加的奶蛙进 `assets.json` 的 `pets` 和 `clips` 就会出现在菜单里，不要在代码里写死名字。
+- `[必须]` 每只自己的「看着你」「做完」写在 `assets.json` 里它那条 clip 的 `look` / `done`，代码不写死。缺了要能退：等你时原样不动只冒气泡；做完先用它自己的 `look`，再用全局 `done`（沉溺的惊鸿一瞥）。理由：内容审核让一部分奶蛙出不了某些片段，不能因为缺一段就换成别的奶蛙常驻。
 - 悬停换只：空闲时指针停在奶蛙不透明处 0.7 秒换下一只（`Pet.pickNext`），离开整个窗口才能再来一次（换了形状以后指针可能落在透明处，不能算离开）；换出来的只管到下个时段。播放器只留当前这只和干活 / 等你 / 做完要用的。
 - README 里的动图是 `docs/pets/*.webp` 和 `docs/demo.webp`：带透明通道的动态 WebP（240px，GitHub 浅色、深色主题都干净；GIF 只有 1 位透明，边缘有锯齿）。加了新奶蛙要补一张。
 - 整个仓库 MIT，见 LICENSE。
@@ -25,7 +26,7 @@ naiwa-pet：macOS 桌面上的奶蛙。空闲时按一天的时段换一只慢�
 - 显示：`AVPlayerItemVideoOutput` 取 IOSurface 做底的 BGRA 帧，直接设成图层的 `contents`（`PetView.show`），并给 IOSurface 标上 sRGB。复制成 CGImage 再贴，空闲循环要多占 6–8% CPU。命中测试直接读这一帧的像素缓冲。不要用 `AVPlayerLayer`：画面由系统单独合成，没法验证。
 - 锁屏时窗口的遮挡状态仍是「看得见」：要单独听 `com.apple.screenIsLocked` / `com.apple.screenIsUnlocked`，启动时也先查一次（`CGSessionCopyCurrentDictionary`）。
 - 看不到屏幕时（沙箱、锁屏）验证画面：截窗口（`CGWindowListCreateImage`）在锁屏或没有录屏权限时全是透明的；`layer.render(in:)` 不画 IOSurface 内容。用 `CARenderer(mtlTexture:)` 把一个以当前 IOSurface 为内容的图层离屏合成到 Metal 纹理再读回（先 `CATransaction.flush()`；读回来是上下颠倒的，放个标记块判断方向）。
-- 状态之间硬切：两个透明画面叠化会出重影。干活 / 等你 / 做完是同一只（沉溺奶蛙），切过去不跳。
+- 状态之间硬切：两个透明画面叠化会出重影。同一只的空闲、看着你、做完用同一个裁剪框，做完的动作最后回到第一帧的姿势，切过去不跳。
 - 在 Naiwa.app 里拿自己的 bundle id 当 `UserDefaults(suiteName:)` 会返回 nil。
 - CFMessagePort 回调给的 CFData 只在回调期间有效：必须当场复制再丢到主线程，直接桥接成 `Data` 会读到垃圾。
 - 「等你」只看 `Notification` 的 `notification_type`（`permission_prompt` 等），不要按提示语猜：`idle_prompt` 和别的提醒文案不止一种，按文字过滤会在没人要权限时显示「等你确认」。
