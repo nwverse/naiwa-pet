@@ -37,9 +37,12 @@ final class ScheduleStore {
     private func resolve(_ j: [String: Any]) -> Schedule {
         var s = defaults
         if let mine = Schedule(json: j, known: known) { s.idle = mine.idle }
-        if let work = j["work"] as? String, known.contains(work) { s.work = work }
+        if let work = j["work"] as? String, canWork(work) { s.work = work }
         return s
     }
+
+    /// 干活时能填的：认识的奶蛙，或者「跟着时段」
+    private func canWork(_ name: String) -> Bool { known.contains(name) || name == Schedule.followSlot }
 
     /// 编辑器写到一半、JSON 暂时不完整时保留当前安排；删除文件则恢复默认。
     @discardableResult func reload() -> Schedule {
@@ -59,7 +62,7 @@ final class ScheduleStore {
         var j = try document(original)
         switch edit {
         case .work(let name):
-            guard known.contains(name) else { throw Failure("找不到这只奶蛙。") }
+            guard canWork(name) else { throw Failure("找不到这只奶蛙。") }
             j["work"] = name
         case .toggle(let name, let from):
             guard known.contains(name) else { throw Failure("找不到这只奶蛙。") }

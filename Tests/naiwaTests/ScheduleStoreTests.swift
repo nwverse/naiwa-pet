@@ -92,6 +92,17 @@ struct ScheduleStoreTests {
         }
     }
 
+    @Test func workCanFollowTheTimeSlot() throws {
+        try withStore(#"{"work":"slot"}"#) { store, file in
+            #expect(store.current.work == Schedule.followSlot)
+            _ = try store.apply(.work("listen"))
+            #expect(store.current.work == "listen")
+            let s = try store.apply(.work(Schedule.followSlot))
+            #expect(s.work == Schedule.followSlot)
+            #expect(try json(file)["work"] as? String == "slot")
+        }
+    }
+
     @Test func editingSymlinkPreservesLinkAndPermissions() throws {
         try withStore(nil) { _, file in
             let target = file.deletingLastPathComponent().appendingPathComponent("dotfile.json")

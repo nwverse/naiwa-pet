@@ -51,7 +51,7 @@ enum CLI {
         exit(Link.send(.play, data: Data(clip.utf8)) ? 0 : 1)
     }
 
-    /// 演示一遍所有状态：空闲 → 干活（沉溺）→ 等你批准 → 批准后接着干 → 干完惊鸿一瞥
+    /// 演示一遍所有状态：空闲 → 干活 → 等你批准 → 批准后接着干 → 干完惊鸿一瞥
     static func demo() {
         if !Link.send(.hook, data: Data("{}".utf8)) {
             launch(["run"])
@@ -66,15 +66,15 @@ enum CLI {
         }
         print("空闲：这个时段的奶蛙在慢慢地动")
         usleep(3_000_000)
-        event("UserPromptSubmit", wait: 0.3, "Claude 开始干活：沉溺奶蛙，闭着眼悬浮在水里")
+        event("UserPromptSubmit", wait: 0.3, "Claude 开始干活：干活时那只（默认就是空闲时这只）")
         let tool: [String: Any] = ["tool_use_id": "demo-bash", "tool_name": "Bash"]
         event("PreToolUse", tool, wait: 6)
         event("Notification", ["message": "Claude needs your permission to use Bash", "notification_type": "permission_prompt"], wait: 6,
-              "等你批准：睁开眼转过来看着你")
+              "等你批准：它睁开眼看着你（没有这段的那只原样不动，只冒气泡）")
         print("假设此时批准：Claude 不发批准事件，提醒会保留到工具结束或 60 秒上限")
         usleep(3_000_000)
         event("PostToolUse", tool, wait: 3, "工具完成：清掉权限提醒，继续处理结果")
-        event("Stop", ["naiwa_seconds": 125.0], wait: 6, "干完一个活（假装跑了 2 分钟）：惊鸿一瞥，瞥完回到空闲")
+        event("Stop", ["naiwa_seconds": 125.0], wait: 6, "干完一个活（假装跑了 2 分钟）：它回你一下（沉溺是惊鸿一瞥），然后回到空闲")
         event("SessionEnd", wait: 0)
     }
 
@@ -90,15 +90,22 @@ enum CLI {
         let width = (assets.pets.map(\.count).max() ?? 8) + 2
         for p in assets.pets {
             guard let c = assets.clips[p] else { continue }
-            let use = c.loop ? "空闲、干活都能用" : p == assets.look ? "等你批准时" : p == assets.done ? "干完一个活时、点它时" : ""
-            print("  " + p.padding(toLength: width, withPad: " ", startingAt: 0) + c.title + "：" + c.desc + "（" + use + "）")
+            var use: [String] = []
+            if c.loop {
+                use.append("空闲、干活都能用")
+            } else if let o = assets.owner(of: p) {
+                if assets.clips[o]?.look == p { use.append(assets.title(o) + "等你批准时") }
+                if assets.done(for: o) == p { use.append(assets.title(o) + "干完一个活时、点它时") }
+            }
+            if p == assets.done { use.append("没有自己瞥你那段的奶蛙做完时") }
+            print("  " + p.padding(toLength: width, withPad: " ", startingAt: 0) + c.title + "：" + c.desc + "（" + use.joined(separator: "；") + "）")
         }
         print("\n现在的安排（" + (mine ? Schedule.file.path.replacingOccurrences(of: NSHomeDirectory(), with: "~") : "默认") + "）：")
         for (i, slot) in s.idle.enumerated() {
             let to = s.idle[(i + 1) % s.idle.count].from
             print(String(format: "  空闲 %02d:00–%02d:00  ", slot.from, to) + slot.pets.map(assets.title).joined(separator: "、"))
         }
-        print("  干活时         " + assets.title(s.work))
+        print("  干活时         " + (s.work == Schedule.followSlot ? "跟着时段（空闲时是哪只，干活时还是哪只）" : assets.title(s.work)))
         print("\n改法：右键奶蛙 →「空闲时」「干活时」里勾；或者改 ~/.config/naiwa/config.json（时段起点也能改，改完自动生效）。")
     }
 

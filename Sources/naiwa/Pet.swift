@@ -3,9 +3,9 @@ import AppKit
 /// 桌面上那只奶蛙：一个透明、置顶、不抢焦点的小窗，没有声音：
 ///   空闲：按一天的时段换一只，在那里慢慢地动（安睡、听歌、悠闲、云幻、封闭、孤独），首尾接上一直循环；
 ///         鼠标在它身上停一下就换下一只（到下个时段恢复）
-///   干活：沉溺奶蛙，闭着眼悬浮在水里，沉浸在活里
-///   等你：沉溺奶蛙睁开眼转过来看着你，停住，头顶冒「项目 等你批准 Bash」
-///   做完：惊鸿一瞥：镜头推近，它斜着瞥你一眼，头顶冒「项目 做完了 · 时长」；摸它、点它也会瞥你
+///   干活：默认还是空闲时那只（跟着时段走）；也可以在菜单里固定成某一只（比如沉溺奶蛙）
+///   等你：干活那只睁开眼看着你，停住，头顶冒「项目 等你批准 Bash」；没有这段的那只原样不动，只冒气泡
+///   做完：干活那只瞥你一眼（惊鸿一瞥），头顶冒「项目 做完了 · 时长」；摸它、点它也会瞥你。没有自己这段的用默认的那段
 /// 优先级：瞥 > 等你 > 干活 > 空闲。瞥的时候不会被打断，瞥完再回到当时该有的状态。状态之间硬切（透明的画面叠化会出重影）。
 /// 窗口被挡住、屏幕睡了、锁屏就停播，不白占 CPU。
 final class Pet {
@@ -25,6 +25,9 @@ final class Pet {
     private var playing: (name: String, player: ClipPlayer, start: CFTimeInterval)?
     /// 现在演的是哪段；nil = 下次 render 重新挑
     private var shown: String?
+    /// 现在台上是哪只（循环的那只；它的看着你、瞥你也算它）。干活跟着时段时，空闲、干活、等你、做完都是这只
+    private var pet: String?
+    private var lastMood: Sessions.Mood = .idle
     private var idleTurn = 0
     private var reacting = false
     private var visible = true
@@ -100,18 +103,20 @@ final class Pet {
     // MARK: 状态
 
     private func react(text: String?) {
-        guard clip(assets.done) != nil else { return }
+        // 台上那只自己的瞥你；没有就用默认的那段
+        let done = assets.done(for: pet)
+        guard let c = clip(done) else { return }
         if reacting {
             // 正在瞥就不打断，快瞥完了再来一次就从头来
             guard let p = playing, CACurrentMediaTime() - p.start >= p.player.duration * 0.8 else { return }
         }
         reacting = true
-        if let text, let c = clip(assets.done) {
+        if let text {
             bubbleIsWaiting = false
             bubble.show(text, above: panel.frame, for: c.duration + 1.5)
         }
-        shown = assets.done
-        play(assets.done) { [weak self] in
+        shown = done
+        play(done) { [weak self] in
             guard let self else { return }
             self.reacting = false
             self.shown = nil
@@ -124,6 +129,8 @@ final class Pet {
         reloadIfEdited()
         if reacting { return }
         let mood = sessions.mood
+        pet = Self.keptPet(pet, mood: mood, lastMood: lastMood)
+        lastMood = mood
         scheduleExpiry()
         if mood == .waiting, let t = sessions.waitingText, bubble.text != t || !bubbleIsWaiting {
             bubbleIsWaiting = true
@@ -132,20 +139,41 @@ final class Pet {
             bubbleIsWaiting = false
             bubble.hide()
         }
-        var want = mood == .waiting ? assets.look : mood == .working ? schedule.work : idleClip()
-        if clip(want) == nil { want = idleClip() }
-        guard want != shown, visible || want == assets.look else { return }
-        shown = want
+        var p = mood == .idle ? idleClip() : workPet()
+        if clip(p) == nil { p = idleClip() }
+        pet = p
+        let want = mood == .waiting ? assets.look(for: p) : p
         let loop = assets.clips[want]?.loop ?? false
+        guard want != shown, visible || !loop else { return }
+        shown = want
         play(want, loop: loop)   // 不循环的（等你）播完停在最后一帧：一直看着你
     }
 
-    /// 这个时段该出来的那只。鼠标换过就是换出来的那只；已经在演这个时段的某一只就不换；同一时段有几只，每回到空闲换下一只
+    /// 这个时段该出来的那只。鼠标换过就是换出来的那只；台上已经是这个时段的某一只就不换；同一时段有几只，每干完一轮回到空闲换下一只
     private func idleClip() -> String {
         let names = schedule.slot().pets
         let validPick = picked.flatMap { assets.clips[$0] != nil ? $0 : nil }
-        return Self.idleCandidate(picked: validPick, shown: shown, names: names,
+        return Self.idleCandidate(picked: validPick, shown: pet, names: names,
                                   broken: broken, turn: &idleTurn) ?? names[0]
+    }
+
+    /// 干活时是哪只：菜单里固定了就是那只；跟着时段就接着用台上那只，干完这轮再换（中途到点换时段也不换）
+    private func workPet() -> String {
+        Self.workCandidate(work: schedule.work, current: pet) { [assets, broken] in
+            assets.clips[$0]?.loop == true && !broken.contains($0)
+        } ?? idleClip()
+    }
+
+    /// 跟着时段时接着用台上那只（还能播的循环片段）；固定了就是那只；nil = 交给空闲的挑法
+    static func workCandidate(work: String, current: String?, playable: (String) -> Bool) -> String? {
+        guard work == Schedule.followSlot else { return work }
+        return current.flatMap { playable($0) ? $0 : nil }
+    }
+
+    /// 干完一轮回到空闲时放掉台上那只，同一时段有几只就换下一只（干活跟着时段时，干活那只就是空闲那只，不放掉就一直不换）。
+    /// 空闲时点它、摸它不算一轮，不换
+    static func keptPet(_ current: String?, mood: Sessions.Mood, lastMood: Sessions.Mood) -> String? {
+        mood == .idle && lastMood != .idle ? nil : current
     }
 
     /// 坏掉的悬停选择和时段候选都跳过；没有可播的候选就让调用方停播。
@@ -172,8 +200,10 @@ final class Pet {
         guard let c = clip(name) else { then?(); return }
         playing?.player.stop()
         playing = (name, c, CACurrentMediaTime())
-        // 播放器只留现在这只和干活 / 等你 / 做完要用的，别的放掉（每个都占着解码器和缓冲）
-        let keep: Set = [name, schedule.work, assets.look, assets.done]
+        // 播放器只留现在这只和它等你 / 做完要用的（固定了干活那只的话也留着它），别的放掉（每个都占着解码器和缓冲）
+        var keep: Set = [name, assets.done(for: pet)]
+        if let pet { keep.formUnion([pet, assets.look(for: pet)]) }
+        if schedule.work != Schedule.followSlot { keep.formUnion([schedule.work, assets.look(for: schedule.work)]) }
         clips = clips.filter { keep.contains($0.key) }
         if frameTimer == nil {
             let t = Timer(timeInterval: 1.0 / 30, repeats: true) { [weak self] _ in
@@ -251,12 +281,12 @@ final class Pet {
         use(config.reload())
     }
 
-    /// 换一套安排：正在演的空闲 / 干活那只要是被换掉了，回到当时该有的那只
+    /// 换一套安排：正在演的空闲 / 干活那只要是被换掉了，回到当时该有的那只（等你那段换了才重播）
     private func use(_ s: Schedule) {
         guard s != schedule else { return }
         schedule = s
         picked = nil
-        if let cur = shown, cur != assets.look, cur != assets.done, !reacting {
+        if let cur = shown, assets.clips[cur]?.loop == true, !reacting {
             stopPlaying()
             shown = nil
         }
@@ -290,7 +320,7 @@ final class Pet {
             idle.addItem(it)
         }
         idle.addItem(.separator())
-        idle.addItem(NSMenuItem(title: "同一时段勾了几只，每回到空闲轮流出来一只", action: nil, keyEquivalent: ""))
+        idle.addItem(NSMenuItem(title: "同一时段勾了几只，每干完一轮回到空闲轮流出来一只", action: nil, keyEquivalent: ""))
         idle.addItem(NSMenuItem(title: "鼠标在奶蛙身上停一下就换下一只，到下个时段恢复", action: nil, keyEquivalent: ""))
         idle.addItem(item("改时段的起止时间…（打开配置文件）") { [weak self] in self?.openConfig() })
         idle.addItem(item("恢复默认") { [weak self] in
@@ -301,12 +331,17 @@ final class Pet {
         idleItem.submenu = idle
 
         let work = NSMenu()
+        let follow = schedule.work == Schedule.followSlot
+        let same = item("跟着时段　空闲时是哪只，干活时还是哪只") { [weak self] in self?.change(.work(Schedule.followSlot)) }
+        same.state = follow ? .on : .off
+        work.addItem(same)
+        work.addItem(.separator())
         for p in assets.loopPets {
             let it = item("\(assets.title(p))　\(assets.clips[p]?.desc ?? "")") { [weak self] in self?.change(.work(p)) }
             it.state = schedule.work == p ? .on : .off
             work.addItem(it)
         }
-        let workItem = NSMenuItem(title: "干活时：\(assets.title(schedule.work))", action: nil, keyEquivalent: "")
+        let workItem = NSMenuItem(title: "干活时：\(follow ? "跟着时段" : assets.title(schedule.work))", action: nil, keyEquivalent: "")
         workItem.submenu = work
         return [idleItem, workItem]
     }
@@ -340,7 +375,7 @@ final class Pet {
 
     /// 空闲时换下一只（所有能循环的轮着来），头顶报一下名字
     private func pickNext() {
-        guard !reacting, !view.dragging, sessions.mood == .idle, let cur = shown else { return }
+        guard !reacting, !view.dragging, sessions.mood == .idle, let cur = pet else { return }
         let all = assets.loopPets
         guard let i = all.firstIndex(of: cur) ?? all.indices.first else { return }
         let next = all[(i + 1) % all.count]
