@@ -2,16 +2,23 @@
  "fps": 24,
  "pets": [
   "sleep",
+  "sleep_look",
   "sleep_done",
   "listen",
   "relax",
   "cloud",
+  "cloud_look",
+  "cloud_done",
   "fish",
+  "fish_look",
+  "fish_done",
   "lonely",
   "wires",
   "clothespin",
+  "clothespin_look",
   "clothespin_done",
   "balloons",
+  "balloons_look",
   "balloons_done",
   "float",
   "flowers",
@@ -49,7 +56,9 @@
    "frames": 109,
    "loop": true,
    "title": "云幻",
-   "desc": "晚霞里一团云做的奶蛙"
+   "desc": "晚霞里一团云做的奶蛙",
+   "look": "cloud_look",
+   "done": "cloud_done"
   },
   "sleep": {
    "video": "sleep.mov",
@@ -57,6 +66,7 @@
    "loop": true,
    "title": "安睡",
    "desc": "趴在一朵云上睡觉",
+   "look": "sleep_look",
    "done": "sleep_done"
   },
   "listen": {
@@ -71,7 +81,9 @@
    "frames": 144,
    "loop": true,
    "title": "封闭",
-   "desc": "浮在半空，一圈小鱼绕着它"
+   "desc": "浮在半空，一圈小鱼绕着它",
+   "look": "fish_look",
+   "done": "fish_done"
   },
   "lonely": {
    "video": "lonely.mov",
@@ -93,6 +105,7 @@
    "loop": true,
    "title": "晾衣",
    "desc": "被晾衣夹夹在绳子上晃",
+   "look": "clothespin_look",
    "done": "clothespin_done"
   },
   "balloons": {
@@ -101,6 +114,7 @@
    "loop": true,
    "title": "气球",
    "desc": "被一串气球吊着飘",
+   "look": "balloons_look",
    "done": "balloons_done"
   },
   "float": {
@@ -151,6 +165,55 @@
    "loop": false,
    "title": "安睡 · 蹭一蹭",
    "desc": "在梦里蹭蹭云朵，又睡熟了"
+  },
+  "sleep_look": {
+   "video": "sleep_look.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "安睡 · 看着你",
+   "desc": "侧着脸睁开一只眼瞟着你"
+  },
+  "cloud_look": {
+   "video": "cloud_look.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "云幻 · 看着你",
+   "desc": "侧着脸睁开一只眼瞟着你"
+  },
+  "cloud_done": {
+   "video": "cloud_done.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "云幻 · 深呼吸",
+   "desc": "云朵慢慢鼓起又落下，镶一圈金边"
+  },
+  "fish_look": {
+   "video": "fish_look.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "封闭 · 看着你",
+   "desc": "侧着脸睁开一只眼瞟着你"
+  },
+  "clothespin_look": {
+   "video": "clothespin_look.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "晾衣 · 看着你",
+   "desc": "侧着脸睁开一只眼瞟着你"
+  },
+  "fish_done": {
+   "video": "fish_done.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "封闭 · 小鱼游近",
+   "desc": "小鱼游近它又散开"
+  },
+  "balloons_look": {
+   "video": "balloons_look.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "气球 · 看着你",
+   "desc": "侧着脸睁开一只眼瞟着你"
   }
  },
  "idle": [
