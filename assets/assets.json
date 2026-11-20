@@ -177,8 +177,8 @@
    "video": "clothespin_done.mov",
    "frames": 121,
    "loop": false,
-   "title": "晾衣 · 扑腾",
-   "desc": "小手小脚在空中扑腾两下"
+   "title": "晾衣 · 吹干了",
+   "desc": "被风吹得荡一下，蓬起来"
   },
   "balloons_done": {
    "video": "balloons_done.mov",
@@ -198,57 +198,57 @@
    "video": "sleep_look.mov",
    "frames": 121,
    "loop": false,
-   "title": "安睡 · 看着你",
-   "desc": "侧着脸睁开一只眼瞟着你"
+   "title": "安睡 · 云散了",
+   "desc": "身下的云散掉一半，它悬在半空还在睡"
   },
   "cloud_look": {
    "video": "cloud_look.mov",
-   "frames": 121,
+   "frames": 90,
    "loop": false,
-   "title": "云幻 · 看着你",
-   "desc": "侧着脸睁开一只眼瞟着你"
+   "title": "云幻 · 阴天",
+   "desc": "整团云变灰变暗，像要下雨"
   },
   "cloud_done": {
    "video": "cloud_done.mov",
    "frames": 121,
    "loop": false,
-   "title": "云幻 · 深呼吸",
-   "desc": "云朵慢慢鼓起又落下，镶一圈金边"
+   "title": "云幻 · 呼",
+   "desc": "吐出一小团云，晚霞亮起来"
   },
   "fish_look": {
    "video": "fish_look.mov",
-   "frames": 121,
+   "frames": 47,
    "loop": false,
-   "title": "封闭 · 看着你",
-   "desc": "侧着脸睁开一只眼瞟着你"
+   "title": "封闭 · 小鱼看你",
+   "desc": "小鱼突然停下，齐刷刷朝着你"
   },
   "clothespin_look": {
    "video": "clothespin_look.mov",
-   "frames": 121,
+   "frames": 115,
    "loop": false,
-   "title": "晾衣 · 看着你",
-   "desc": "侧着脸睁开一只眼瞟着你"
+   "title": "晾衣 · 夹子松了",
+   "desc": "夹子一松，歪挂在绳子上"
   },
   "fish_done": {
    "video": "fish_done.mov",
    "frames": 121,
    "loop": false,
-   "title": "封闭 · 小鱼游近",
-   "desc": "小鱼游近它又散开"
+   "title": "封闭 · 烟花",
+   "desc": "小鱼像烟花一样散开又游回来"
   },
   "balloons_look": {
    "video": "balloons_look.mov",
    "frames": 121,
    "loop": false,
-   "title": "气球 · 看着你",
-   "desc": "侧着脸睁开一只眼瞟着你"
+   "title": "气球 · 漏气",
+   "desc": "气球瘪下去，吊着它晃"
   },
   "ripple_look": {
    "video": "ripple_look.mov",
-   "frames": 90,
+   "frames": 121,
    "loop": false,
-   "title": "涟漪 · 看着你",
-   "desc": "睁开一只眼斜着瞟你"
+   "title": "涟漪 · 锦鲤",
+   "desc": "一条小锦鲤游到它肚子上停住"
   },
   "ripple_done": {
    "video": "ripple_done.mov",
@@ -273,10 +273,10 @@
   },
   "float_look": {
    "video": "float_look.mov",
-   "frames": 90,
+   "frames": 71,
    "loop": false,
-   "title": "漂浮 · 看着你",
-   "desc": "侧着脸睁开一只眼瞟着你"
+   "title": "漂浮 · 被淹了",
+   "desc": "一个浪过来，只剩头顶露在水面"
   },
   "flowers_done": {
    "video": "flowers_done.mov",
@@ -331,8 +331,8 @@
    "video": "wires_done.mov",
    "frames": 121,
    "loop": false,
-   "title": "缠线 · 扭一扭",
-   "desc": "扭了扭身子，线跟着晃"
+   "title": "缠线 · 被电了一下",
+   "desc": "周围的电子设备一亮，它连着线猛地弹了两下"
   },
   "flowers_look": {
    "video": "flowers_look.mov",

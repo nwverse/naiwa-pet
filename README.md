@@ -1,6 +1,6 @@
 # 奶蛙桌宠 naiwa-pet
 
-一只住在 Mac 桌面角落、跟着 Claude Code 干活的奶蛙。空闲时它按一天的时段换一只，在那里慢慢地动；Claude 一开工，还是这只陪着你干；Claude 要你批准时，它头顶冒个气泡，用自己的方式叫你（瞟你一眼、举起小手、侧身听着）；活干完了、你点它摸它，它按自己的样子回你一下——沉溺奶蛙是镜头推近、斜着瞥你一眼，惊鸿一瞥。
+一只住在 Mac 桌面角落、跟着 Claude Code 干活的奶蛙。空闲时它按一天的时段换一只，在那里慢慢地动；Claude 一开工，还是这只陪着你干；Claude 要你批准时，它头顶冒个气泡，它的小世界也出点状况等着你（云散了、夹子松了、气球漏气了）；活干完了、你点它摸它，它按自己的样子回你一下——沉溺奶蛙是镜头推近、斜着瞥你一眼，惊鸿一瞥。
 
 原生 Swift，没有声音，不抢焦点，不花 token。
 
@@ -56,13 +56,13 @@ https://github.com/user-attachments/assets/3b57d454-f4c0-4b1f-8327-81961681a8f9
 | 只聊了几句 / 说完话没理它 | 不打扰 |
 | 你点它、摸它 | 也回你一下 |
 
-13 只都有自己的样子，和它待的地方有关：
+13 只都有自己的样子，和它待的地方有关。奶蛙自己一直闭着眼，等你批准时是它的小世界出点状况、卡在那儿等你，做完了再恢复原样：
 
 <table>
 <tr><th>奶蛙</th><th>等你批准时</th><th>做完、点它摸它</th></tr>
 <tr>
 <td align="center"><b>安睡</b> <code>sleep</code></td>
-<td align="center"><img src="docs/pets/sleep_look.webp" width="110"><br>看着你</td>
+<td align="center"><img src="docs/pets/sleep_look.webp" width="110"><br>云散了</td>
 <td align="center"><img src="docs/pets/sleep_done.webp" width="110"><br>蹭一蹭</td>
 </tr>
 <tr>
@@ -77,13 +77,13 @@ https://github.com/user-attachments/assets/3b57d454-f4c0-4b1f-8327-81961681a8f9
 </tr>
 <tr>
 <td align="center"><b>云幻</b> <code>cloud</code></td>
-<td align="center"><img src="docs/pets/cloud_look.webp" width="110"><br>看着你</td>
-<td align="center"><img src="docs/pets/cloud_done.webp" width="110"><br>深呼吸</td>
+<td align="center"><img src="docs/pets/cloud_look.webp" width="110"><br>阴天</td>
+<td align="center"><img src="docs/pets/cloud_done.webp" width="110"><br>呼</td>
 </tr>
 <tr>
 <td align="center"><b>封闭</b> <code>fish</code></td>
-<td align="center"><img src="docs/pets/fish_look.webp" width="110"><br>看着你</td>
-<td align="center"><img src="docs/pets/fish_done.webp" width="110"><br>小鱼游近</td>
+<td align="center"><img src="docs/pets/fish_look.webp" width="110"><br>小鱼看你</td>
+<td align="center"><img src="docs/pets/fish_done.webp" width="110"><br>烟花</td>
 </tr>
 <tr>
 <td align="center"><b>孤独</b> <code>lonely</code></td>
@@ -93,21 +93,21 @@ https://github.com/user-attachments/assets/3b57d454-f4c0-4b1f-8327-81961681a8f9
 <tr>
 <td align="center"><b>缠线</b> <code>wires</code></td>
 <td align="center"><img src="docs/pets/wires_look.webp" width="110"><br>举手</td>
-<td align="center"><img src="docs/pets/wires_done.webp" width="110"><br>扭一扭</td>
+<td align="center"><img src="docs/pets/wires_done.webp" width="110"><br>被电了一下</td>
 </tr>
 <tr>
 <td align="center"><b>晾衣</b> <code>clothespin</code></td>
-<td align="center"><img src="docs/pets/clothespin_look.webp" width="110"><br>看着你</td>
-<td align="center"><img src="docs/pets/clothespin_done.webp" width="110"><br>扑腾</td>
+<td align="center"><img src="docs/pets/clothespin_look.webp" width="110"><br>夹子松了</td>
+<td align="center"><img src="docs/pets/clothespin_done.webp" width="110"><br>吹干了</td>
 </tr>
 <tr>
 <td align="center"><b>气球</b> <code>balloons</code></td>
-<td align="center"><img src="docs/pets/balloons_look.webp" width="110"><br>看着你</td>
+<td align="center"><img src="docs/pets/balloons_look.webp" width="110"><br>漏气</td>
 <td align="center"><img src="docs/pets/balloons_done.webp" width="110"><br>飘一下</td>
 </tr>
 <tr>
 <td align="center"><b>漂浮</b> <code>float</code></td>
-<td align="center"><img src="docs/pets/float_look.webp" width="110"><br>看着你</td>
+<td align="center"><img src="docs/pets/float_look.webp" width="110"><br>被淹了</td>
 <td align="center"><img src="docs/pets/float_done.webp" width="110"><br>浪来了</td>
 </tr>
 <tr>
@@ -117,7 +117,7 @@ https://github.com/user-attachments/assets/3b57d454-f4c0-4b1f-8327-81961681a8f9
 </tr>
 <tr>
 <td align="center"><b>涟漪</b> <code>ripple</code></td>
-<td align="center"><img src="docs/pets/ripple_look.webp" width="110"><br>看着你</td>
+<td align="center"><img src="docs/pets/ripple_look.webp" width="110"><br>锦鲤</td>
 <td align="center"><img src="docs/pets/ripple_done.webp" width="110"><br>落花</td>
 </tr>
 <tr>
