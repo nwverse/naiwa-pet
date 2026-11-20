@@ -1,6 +1,6 @@
 # 奶蛙桌宠 naiwa-pet
 
-一只住在 Mac 桌面角落、跟着 Claude Code 干活的奶蛙。空闲时它按一天的时段换一只，在那里慢慢地动；Claude 一开工，还是这只陪着你干；Claude 要你批准时，它头顶冒个气泡，睁开一只眼斜着瞟你；活干完了、你点它摸它，它按自己的样子回你一下——沉溺奶蛙是镜头推近、斜着瞥你一眼，惊鸿一瞥。
+一只住在 Mac 桌面角落、跟着 Claude Code 干活的奶蛙。空闲时它按一天的时段换一只，在那里慢慢地动；Claude 一开工，还是这只陪着你干；Claude 要你批准时，它头顶冒个气泡，用自己的方式叫你（瞟你一眼、举起小手、侧身听着）；活干完了、你点它摸它，它按自己的样子回你一下——沉溺奶蛙是镜头推近、斜着瞥你一眼，惊鸿一瞥。
 
 原生 Swift，没有声音，不抢焦点，不花 token。
 
@@ -51,48 +51,81 @@ https://github.com/user-attachments/assets/3b57d454-f4c0-4b1f-8327-81961681a8f9
 |---|---|
 | 空闲 | 按时段换（见上面），同一时段有几只就轮流出来 |
 | Claude 在干活 | 还是空闲时那只，干完这一轮才换；右键「干活时」可以固定成某一只（比如沉溺） |
-| Claude 等你批准（要权限、MCP 弹窗问你） | 头顶「my-repo 等你批准 Bash」，它睁开一只眼斜着瞟你（沉溺奶蛙是睁眼转过来看你）；你处理完它接着干 |
+| Claude 等你批准（要权限、MCP 弹窗问你） | 头顶「my-repo 等你批准 Bash」，它用自己的方式叫你（见下表）；你处理完它接着干 |
 | 干完一个活（这一轮跑满 1 分钟，且读写过文件或跑过命令） | 它回你一下（见下面），头顶「my-repo 做完了 · 4 分 12 秒」 |
 | 只聊了几句 / 说完话没理它 | 不打扰 |
 | 你点它、摸它 | 也回你一下 |
 
-每只都有自己的样子，和它待的地方有关：
+13 只都有自己的样子，和它待的地方有关：
 
 <table>
-<tr><th>奶蛙</th><th>等你批准：瞟着你</th><th>做完、点它摸它</th></tr>
+<tr><th>奶蛙</th><th>等你批准时</th><th>做完、点它摸它</th></tr>
 <tr>
-<td align="center"><img src="docs/pets/sleep.webp" width="120"><br><b>安睡</b> <code>sleep</code></td>
-<td align="center"><img src="docs/pets/sleep_look.webp" width="120"></td>
-<td align="center"><img src="docs/pets/sleep_done.webp" width="120"><br>蹭蹭云，又睡熟了</td>
+<td align="center"><b>安睡</b> <code>sleep</code></td>
+<td align="center"><img src="docs/pets/sleep_look.webp" width="110"><br>看着你</td>
+<td align="center"><img src="docs/pets/sleep_done.webp" width="110"><br>蹭一蹭</td>
 </tr>
 <tr>
-<td align="center"><img src="docs/pets/clothespin.webp" width="120"><br><b>晾衣</b> <code>clothespin</code></td>
-<td align="center"><img src="docs/pets/clothespin_look.webp" width="120"></td>
-<td align="center"><img src="docs/pets/clothespin_done.webp" width="120"><br>小手小脚扑腾两下</td>
+<td align="center"><b>听歌</b> <code>listen</code></td>
+<td align="center"><img src="docs/pets/listen_look.webp" width="110"><br>侧耳</td>
+<td align="center"><img src="docs/pets/listen_done.webp" width="110"><br>点点头</td>
 </tr>
 <tr>
-<td align="center"><img src="docs/pets/balloons.webp" width="120"><br><b>气球</b> <code>balloons</code></td>
-<td align="center"><img src="docs/pets/balloons_look.webp" width="120"></td>
-<td align="center"><img src="docs/pets/balloons_done.webp" width="120"><br>被气球带着飘一下</td>
+<td align="center"><b>悠闲</b> <code>relax</code></td>
+<td align="center"><img src="docs/pets/relax_look.webp" width="110"><br>举手</td>
+<td align="center"><img src="docs/pets/relax_done.webp" width="110"><br>伸懒腰</td>
 </tr>
 <tr>
-<td align="center"><img src="docs/pets/cloud.webp" width="120"><br><b>云幻</b> <code>cloud</code></td>
-<td align="center"><img src="docs/pets/cloud_look.webp" width="120"></td>
-<td align="center"><img src="docs/pets/cloud_done.webp" width="120"><br>云朵深呼吸，镶一圈金边</td>
+<td align="center"><b>云幻</b> <code>cloud</code></td>
+<td align="center"><img src="docs/pets/cloud_look.webp" width="110"><br>看着你</td>
+<td align="center"><img src="docs/pets/cloud_done.webp" width="110"><br>深呼吸</td>
 </tr>
 <tr>
-<td align="center"><img src="docs/pets/fish.webp" width="120"><br><b>封闭</b> <code>fish</code></td>
-<td align="center"><img src="docs/pets/fish_look.webp" width="120"></td>
-<td align="center"><img src="docs/pets/fish_done.webp" width="120"><br>小鱼游过来又散开</td>
+<td align="center"><b>封闭</b> <code>fish</code></td>
+<td align="center"><img src="docs/pets/fish_look.webp" width="110"><br>看着你</td>
+<td align="center"><img src="docs/pets/fish_done.webp" width="110"><br>小鱼游近</td>
 </tr>
 <tr>
-<td align="center"><img src="docs/pets/immerse.webp" width="120"><br><b>沉溺</b> <code>immerse</code></td>
-<td align="center"><img src="docs/pets/look.webp" width="120"></td>
-<td align="center"><img src="docs/pets/glance.webp" width="120"><br>惊鸿一瞥</td>
+<td align="center"><b>孤独</b> <code>lonely</code></td>
+<td align="center"><img src="docs/pets/lonely_look.webp" width="110"><br>侧身听</td>
+<td align="center"><img src="docs/pets/lonely_done.webp" width="110"><br>晃一晃</td>
+</tr>
+<tr>
+<td align="center"><b>缠线</b> <code>wires</code></td>
+<td align="center"><img src="docs/pets/wires_look.webp" width="110"><br>举手</td>
+<td align="center"><img src="docs/pets/wires_done.webp" width="110"><br>扭一扭</td>
+</tr>
+<tr>
+<td align="center"><b>晾衣</b> <code>clothespin</code></td>
+<td align="center"><img src="docs/pets/clothespin_look.webp" width="110"><br>看着你</td>
+<td align="center"><img src="docs/pets/clothespin_done.webp" width="110"><br>扑腾</td>
+</tr>
+<tr>
+<td align="center"><b>气球</b> <code>balloons</code></td>
+<td align="center"><img src="docs/pets/balloons_look.webp" width="110"><br>看着你</td>
+<td align="center"><img src="docs/pets/balloons_done.webp" width="110"><br>飘一下</td>
+</tr>
+<tr>
+<td align="center"><b>漂浮</b> <code>float</code></td>
+<td align="center"><img src="docs/pets/float_look.webp" width="110"><br>看着你</td>
+<td align="center"><img src="docs/pets/float_done.webp" width="110"><br>浪来了</td>
+</tr>
+<tr>
+<td align="center"><b>花海</b> <code>flowers</code></td>
+<td align="center"><img src="docs/pets/flowers_look.webp" width="110"><br>迎风</td>
+<td align="center"><img src="docs/pets/flowers_done.webp" width="110"><br>乘风</td>
+</tr>
+<tr>
+<td align="center"><b>涟漪</b> <code>ripple</code></td>
+<td align="center"><img src="docs/pets/ripple_look.webp" width="110"><br>看着你</td>
+<td align="center"><img src="docs/pets/ripple_done.webp" width="110"><br>落花</td>
+</tr>
+<tr>
+<td align="center"><b>沉溺</b> <code>immerse</code></td>
+<td align="center"><img src="docs/pets/look.webp" width="110"><br>看着你</td>
+<td align="center"><img src="docs/pets/glance.webp" width="110"><br>惊鸿一瞥</td>
 </tr>
 </table>
-
-其他几只（悠闲、听歌、孤独、缠线、漂浮、花海、涟漪）还没有自己的样子：等你批准时原样不动只冒气泡，做完用沉溺奶蛙的惊鸿一瞥。
 
 ## 特色
 
