@@ -5,7 +5,11 @@
   "sleep_look",
   "sleep_done",
   "listen",
+  "listen_look",
+  "listen_done",
   "relax",
+  "relax_look",
+  "relax_done",
   "cloud",
   "cloud_look",
   "cloud_done",
@@ -13,7 +17,11 @@
   "fish_look",
   "fish_done",
   "lonely",
+  "lonely_look",
+  "lonely_done",
   "wires",
+  "wires_look",
+  "wires_done",
   "clothespin",
   "clothespin_look",
   "clothespin_done",
@@ -21,8 +29,14 @@
   "balloons_look",
   "balloons_done",
   "float",
+  "float_look",
+  "float_done",
   "flowers",
+  "flowers_look",
+  "flowers_done",
   "ripple",
+  "ripple_look",
+  "ripple_done",
   "immerse",
   "look",
   "glance"
@@ -49,7 +63,9 @@
    "frames": 109,
    "loop": true,
    "title": "悠闲",
-   "desc": "靠在橙色沙发上晒太阳"
+   "desc": "靠在橙色沙发上晒太阳",
+   "look": "relax_look",
+   "done": "relax_done"
   },
   "cloud": {
    "video": "cloud.mov",
@@ -74,7 +90,9 @@
    "frames": 96,
    "loop": true,
    "title": "听歌",
-   "desc": "戴着耳机坐着发呆"
+   "desc": "戴着耳机坐着发呆",
+   "look": "listen_look",
+   "done": "listen_done"
   },
   "fish": {
    "video": "fish.mov",
@@ -90,14 +108,18 @@
    "frames": 120,
    "loop": true,
    "title": "孤独",
-   "desc": "背对你扶着椅子望着远方"
+   "desc": "背对你扶着椅子望着远方",
+   "look": "lonely_look",
+   "done": "lonely_done"
   },
   "wires": {
    "video": "wires.mov",
    "frames": 109,
    "loop": true,
    "title": "缠线",
-   "desc": "被一堆数据线缠住，周围散着老电子产品"
+   "desc": "被一堆数据线缠住，周围散着老电子产品",
+   "look": "wires_look",
+   "done": "wires_done"
   },
   "clothespin": {
    "video": "clothespin.mov",
@@ -122,21 +144,27 @@
    "frames": 109,
    "loop": true,
    "title": "漂浮",
-   "desc": "泡在海里只露出上半身"
+   "desc": "泡在海里只露出上半身",
+   "look": "float_look",
+   "done": "float_done"
   },
   "flowers": {
    "video": "flowers.mov",
    "frames": 120,
    "loop": true,
    "title": "花海",
-   "desc": "在花田里张开手臂慢慢转"
+   "desc": "在花田里张开手臂慢慢转",
+   "look": "flowers_look",
+   "done": "flowers_done"
   },
   "ripple": {
    "video": "ripple.mov",
    "frames": 109,
    "loop": true,
    "title": "涟漪",
-   "desc": "仰面漂在落满花瓣的水塘里"
+   "desc": "仰面漂在落满花瓣的水塘里",
+   "look": "ripple_look",
+   "done": "ripple_done"
   },
   "glance": {
    "video": "glance.mov",
@@ -214,6 +242,104 @@
    "loop": false,
    "title": "气球 · 看着你",
    "desc": "侧着脸睁开一只眼瞟着你"
+  },
+  "ripple_look": {
+   "video": "ripple_look.mov",
+   "frames": 90,
+   "loop": false,
+   "title": "涟漪 · 看着你",
+   "desc": "睁开一只眼斜着瞟你"
+  },
+  "ripple_done": {
+   "video": "ripple_done.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "涟漪 · 落花",
+   "desc": "一片花瓣落在肚子上，荡开一圈涟漪"
+  },
+  "listen_done": {
+   "video": "listen_done.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "听歌 · 点点头",
+   "desc": "跟着音乐点头，小脚一晃一晃"
+  },
+  "relax_done": {
+   "video": "relax_done.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "悠闲 · 伸懒腰",
+   "desc": "伸个懒腰，拍拍肚子"
+  },
+  "float_look": {
+   "video": "float_look.mov",
+   "frames": 90,
+   "loop": false,
+   "title": "漂浮 · 看着你",
+   "desc": "侧着脸睁开一只眼瞟着你"
+  },
+  "flowers_done": {
+   "video": "flowers_done.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "花海 · 乘风",
+   "desc": "张开的手臂随风摆两下"
+  },
+  "float_done": {
+   "video": "float_done.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "漂浮 · 浪来了",
+   "desc": "跟着小浪浮起又落下"
+  },
+  "lonely_look": {
+   "video": "lonely_look.mov",
+   "frames": 72,
+   "loop": false,
+   "title": "孤独 · 侧身听",
+   "desc": "扶着椅子往一边歪过去，侧身听着"
+  },
+  "lonely_done": {
+   "video": "lonely_done.mov",
+   "frames": 58,
+   "loop": false,
+   "title": "孤独 · 晃一晃",
+   "desc": "连人带椅子轻轻晃两下"
+  },
+  "listen_look": {
+   "video": "listen_look.mov",
+   "frames": 72,
+   "loop": false,
+   "title": "听歌 · 侧耳",
+   "desc": "身子往前探，像在听你说"
+  },
+  "relax_look": {
+   "video": "relax_look.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "悠闲 · 举手",
+   "desc": "闭着眼举起一只小手"
+  },
+  "wires_look": {
+   "video": "wires_look.mov",
+   "frames": 98,
+   "loop": false,
+   "title": "缠线 · 举手",
+   "desc": "从线堆里伸出一只小手举着"
+  },
+  "wires_done": {
+   "video": "wires_done.mov",
+   "frames": 121,
+   "loop": false,
+   "title": "缠线 · 扭一扭",
+   "desc": "扭了扭身子，线跟着晃"
+  },
+  "flowers_look": {
+   "video": "flowers_look.mov",
+   "frames": 72,
+   "loop": false,
+   "title": "花海 · 迎风",
+   "desc": "顺着风往前倾，停住"
   }
  },
  "idle": [
