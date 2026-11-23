@@ -4,11 +4,11 @@
 
 原生 Swift，没有声音，不抢焦点，不花 token。
 
-[![奶蛙与 Clawd 的视频预览](docs/assets/promo-preview.webp)](#视频介绍)
+[![奶蛙桌宠视频预览：桌角的一天](docs/assets/promo-preview.webp)](#视频介绍)
 
 ## 视频介绍
 
-https://github.com/user-attachments/assets/3b57d454-f4c0-4b1f-8327-81961681a8f9
+https://github.com/user-attachments/assets/5cb55d77-151e-4a2d-bb15-88ded3b8093c
 
 ## 所有奶蛙
 
